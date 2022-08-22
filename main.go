@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/service"
+	"golang.org/x/sys/windows"
 	"io"
 	"io/ioutil"
 	"log"
@@ -13,6 +14,7 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 var logger service.Logger
@@ -103,31 +105,31 @@ func (p *Pgosrv) scanArgs() error {
 			p.DoUninstall = true
 		}
 
-		if strings.HasPrefix(arg, "--Description=") {
+		if strings.HasPrefix(arg, "--Description") {
 			p.Description, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--DisplayName=") {
+		if strings.HasPrefix(arg, "--DisplayName") {
 			p.DisplayName, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--StartPath=") {
+		if strings.HasPrefix(arg, "--StartPath") {
 			p.StartPath, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--Startup=") {
+		if strings.HasPrefix(arg, "--Startup") {
 			p.Startup, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--JavaHome=") {
+		if strings.HasPrefix(arg, "--JavaHome") {
 			p.JavaHome, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--Classpath=") {
+		if strings.HasPrefix(arg, "--Classpath") {
 			p.Classpath, i = argValue(arg, i)
 		}
 
-		if strings.Contains(arg, "JvmOptions=") {
+		if strings.Contains(arg, "JvmOptions") {
 			var value string
 
 			value, i = argValue(arg, i)
@@ -139,51 +141,47 @@ func (p *Pgosrv) scanArgs() error {
 			}
 		}
 
-		if strings.HasPrefix(arg, "--JvmMx=") {
+		if strings.HasPrefix(arg, "--JvmMx") {
 			p.JvmMx, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--JvmMs=") {
+		if strings.HasPrefix(arg, "--JvmMs") {
 			p.JvmMs, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--JvmSs=") {
+		if strings.HasPrefix(arg, "--JvmSs") {
 			p.JvmSs, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--Jvm=") {
+		if strings.HasPrefix(arg, "--Jvm=") || arg == "--Jvm" {
 			p.Jvm, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--StartMode=") {
+		if strings.HasPrefix(arg, "--StartMode") {
 			p.StartMode, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--StopMode=") {
+		if strings.HasPrefix(arg, "--StopMode") {
 			p.StopMode, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--StartClass=") {
+		if strings.HasPrefix(arg, "--StartClass") {
 			p.StartClass, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--StopClass=") {
+		if strings.HasPrefix(arg, "--StopClass") {
 			p.StopClass, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--StartMethod=") {
+		if strings.HasPrefix(arg, "--StartMethod") {
 			p.StartMethod, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--StopMethod=") {
+		if strings.HasPrefix(arg, "--StopMethod") {
 			p.StopMethod, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--StopMode=") {
-			p.StopMode, i = argValue(arg, i)
-		}
-
-		if strings.HasPrefix(arg, "--StopTimeout=") {
+		if strings.HasPrefix(arg, "--StopTimeout") {
 			var value string
 
 			value, i = argValue(arg, i)
@@ -194,27 +192,27 @@ func (p *Pgosrv) scanArgs() error {
 			}
 		}
 
-		if strings.HasPrefix(arg, "--LogPath=") {
+		if strings.HasPrefix(arg, "--LogPath") {
 			p.LogPath, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--LogPrefix=") {
+		if strings.HasPrefix(arg, "--LogPrefix") {
 			p.LogPrefix, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--LogLevel=") {
+		if strings.HasPrefix(arg, "--LogLevel") {
 			p.LogLevel, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--ServiceUser=") {
+		if strings.HasPrefix(arg, "--ServiceUser") {
 			p.ServiceUser, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--ServicePassword=") {
+		if strings.HasPrefix(arg, "--ServicePassword") {
 			p.ServicePassword, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--PidFile=") {
+		if strings.HasPrefix(arg, "--PidFile") {
 			p.PidFile, i = argValue(arg, i)
 		}
 	}
@@ -296,7 +294,7 @@ func (p *Pgosrv) exec(asStart bool) error {
 		strs = append(strs, fmt.Sprintf("\"%s\"", arg))
 	}
 
-	Debug("execCmd", strings.Join(strs, " "))
+	Debug("execCmd:", SurroundWidth(append([]string{p.Cmd.Path}, p.Cmd.Args...), "\"", " "))
 
 	err := p.Cmd.Start()
 	if Error(err) {
@@ -331,12 +329,7 @@ func (p *Pgosrv) Stop(s service.Service) error {
 func (p *Pgosrv) startService() error {
 	Debug("startService")
 
-	err := p.loadConfig()
-	if Error(err) {
-		return err
-	}
-
-	err = p.exec(true)
+	err := p.exec(true)
 	if Error(err) {
 		return err
 	}
@@ -347,12 +340,7 @@ func (p *Pgosrv) startService() error {
 func (p *Pgosrv) stopService() error {
 	Debug("stopService")
 
-	err := p.loadConfig()
-	if Error(err) {
-		return err
-	}
-
-	err = p.exec(false)
+	err := p.exec(false)
 	if Error(err) {
 		return err
 	}
@@ -395,15 +383,7 @@ func (p *Pgosrv) testService() error {
 func (p *Pgosrv) installService() error {
 	Debug("installService")
 
-	err := p.saveConfig()
-	if Error(err) {
-		return err
-	}
-
-	err = p.loadConfig()
-	if Error(err) {
-		return err
-	}
+	var err error
 
 	p.Service, err = service.New(p, &p.ServiceConfig)
 	if Error(err) {
@@ -423,12 +403,7 @@ func (p *Pgosrv) installService() error {
 func (p *Pgosrv) uninstallService() error {
 	Debug("uninstallService")
 
-	err := p.loadConfig()
-	if Error(err) {
-		return err
-	}
-
-	err = p.deleteConfig()
+	err := p.deleteConfig()
 	Error(err)
 
 	p.Service, err = service.New(p, &p.ServiceConfig)
@@ -448,7 +423,7 @@ func configDir() string {
 
 	configDir = filepath.Join(configDir, title())
 
-	Debug("configDir", configDir)
+	Debug("configDir:", configDir)
 
 	return configDir
 }
@@ -456,7 +431,7 @@ func configDir() string {
 func (p *Pgosrv) configFilename(dir string, extension string) string {
 	filename := filepath.Join(dir, p.Name+extension)
 
-	Debug("configFilename", filename)
+	Debug("configFilename:", filename)
 
 	return filename
 }
@@ -509,6 +484,9 @@ func (p *Pgosrv) loadConfig() error {
 	p.ServiceConfig.Arguments = []string{fmt.Sprintf("//RS//%s", p.Name)}
 	p.ServiceConfig.Description = p.Description
 	p.ServiceConfig.DisplayName = p.DisplayName
+	if p.ServiceConfig.DisplayName == "" {
+		p.ServiceConfig.DisplayName = p.ServiceConfig.Name
+	}
 	p.ServiceConfig.UserName = p.ServiceUser
 	if p.ServicePassword != "" {
 		option := service.KeyValue{}
@@ -542,8 +520,11 @@ func run() error {
 		usage()
 	}
 
+	Debug("cmdline:", SurroundWidth(os.Args, "\"", " "))
+
+	configDir()
+
 	p := &Pgosrv{
-		DisplayName: "ServiceName",
 		Startup:     "manual",
 		Jvm:         "auto",
 		StartClass:  "Main",
@@ -551,12 +532,28 @@ func run() error {
 		StopClass:   "Main",
 		StopMethod:  "main",
 		StopTimeout: 0,
-		LogPath:     configDir(),
-		LogPrefix:   "commons-daemon",
+		LogPath:     "",
+		LogPrefix:   title(),
 		LogLevel:    "Info",
 	}
 
 	err := p.scanArgs()
+	if Error(err) {
+		return err
+	}
+
+	if p.Name == "" {
+		return fmt.Errorf("missing service name")
+	}
+
+	if len(os.Args) >= 2 {
+		err := p.saveConfig()
+		if Error(err) {
+			return err
+		}
+	}
+
+	err = p.loadConfig()
 	if Error(err) {
 		return err
 	}
@@ -570,6 +567,7 @@ func run() error {
 
 			defer f.Close()
 
+			log.SetPrefix(p.LogPrefix)
 			log.SetOutput(io.MultiWriter(os.Stdout, f))
 		}
 	}
@@ -586,6 +584,45 @@ func run() error {
 	return nil
 }
 
+func runMeElevated() error {
+	Debug("re-run elevated")
+
+	verb := "runas"
+	exe, _ := os.Executable()
+	cwd, _ := os.Getwd()
+	args := strings.Join(os.Args[1:], " ")
+
+	verbPtr, _ := syscall.UTF16PtrFromString(verb)
+	exePtr, _ := syscall.UTF16PtrFromString(exe)
+	cwdPtr, _ := syscall.UTF16PtrFromString(cwd)
+	argPtr, _ := syscall.UTF16PtrFromString(args)
+
+	var showCmd int32 = 1 //SW_NORMAL
+
+	err := windows.ShellExecute(0, verbPtr, exePtr, argPtr, cwdPtr, showCmd)
+	if Error(err) {
+		return err
+	}
+
+	return nil
+}
+
+func amAdmin() bool {
+	_, err := os.Open("\\\\.\\PHYSICALDRIVE0")
+	if err != nil {
+		Debug("is runnig elevated: no")
+		return false
+	}
+
+	Debug("is runnig elevated: yes")
+
+	return true
+}
+
 func main() {
-	run()
+	if !amAdmin() {
+		Error(runMeElevated())
+	} else {
+		Error(run())
+	}
 }

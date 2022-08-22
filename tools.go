@@ -11,11 +11,16 @@ import (
 	"unicode"
 )
 
+var (
+	lastError string
+)
+
 func Error(err error) bool {
-	if err == nil {
+	if err == nil || err.Error() == lastError {
 		return false
 	}
 
+	lastError = err.Error()
 	log.Printf("%s %s", "ERROR", err.Error())
 
 	return true
@@ -34,7 +39,7 @@ func Debug(values ...interface{}) {
 func isWindowsOS() bool {
 	b := runtime.GOOS == "windows"
 
-	Debug("isWindowsOs: ", b)
+	Debug("isWindowsOs:", b)
 
 	return b
 }
@@ -50,7 +55,7 @@ func fileExists_(filename string) bool {
 		b = true
 	}
 
-	Debug("fileExists", filename, b)
+	Debug("fileExists:", filename, b)
 
 	return b
 }
@@ -63,7 +68,7 @@ func javaExecutable() string {
 		s = "java"
 	}
 
-	Debug("javaExecutable", s)
+	Debug("javaExecutable:", s)
 
 	return s
 }
@@ -90,7 +95,20 @@ func title() string {
 		}
 	}
 
-	Debug("title", title)
+	Debug("title:", title)
 
 	return title
+}
+
+func SurroundWidth(strs []string, surround string, separator string) string {
+	resultStrs := []string{}
+	for _, str := range strs {
+		resultStrs = append(resultStrs, fmt.Sprintf("\"%s\"", str))
+	}
+
+	result := strings.Join(resultStrs, " ")
+
+	Debug("surroundWidth:", result)
+
+	return result
 }
