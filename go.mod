@@ -1,4 +1,4 @@
-module prunsrv
+module pgosrv
 
 go 1.18
 

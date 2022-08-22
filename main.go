@@ -14,7 +14,7 @@ import (
 
 var logger service.Logger
 
-type Program struct {
+type Pgosrv struct {
 	DoTest        bool            `json:"-"`
 	DoInstall     bool            `json:"-"`
 	DoUninstall   bool            `json:"-"`
@@ -53,7 +53,7 @@ func usage() {
 
 }
 
-func (p *Program) scanArgs() error {
+func (p *Pgosrv) scanArgs() error {
 	Debug("scanArgs")
 
 	var err error
@@ -219,7 +219,7 @@ func (p *Program) scanArgs() error {
 	return nil
 }
 
-func (p *Program) exec(asStart bool) error {
+func (p *Pgosrv) exec(asStart bool) error {
 	var args []string
 
 	if p.JvmMx != "" {
@@ -278,7 +278,7 @@ func (p *Program) exec(asStart bool) error {
 	return nil
 }
 
-func (p *Program) Start(s service.Service) error {
+func (p *Pgosrv) Start(s service.Service) error {
 	Debug("Start")
 
 	err := p.exec(true)
@@ -289,7 +289,7 @@ func (p *Program) Start(s service.Service) error {
 	return nil
 }
 
-func (p *Program) Stop(s service.Service) error {
+func (p *Pgosrv) Stop(s service.Service) error {
 	Debug("Stop")
 
 	err := p.exec(false)
@@ -300,7 +300,7 @@ func (p *Program) Stop(s service.Service) error {
 	return nil
 }
 
-func (p *Program) startService() error {
+func (p *Pgosrv) startService() error {
 	Debug("startService")
 
 	err := p.loadConfig()
@@ -316,7 +316,7 @@ func (p *Program) startService() error {
 	return nil
 }
 
-func (p *Program) stopService() error {
+func (p *Pgosrv) stopService() error {
 	Debug("stopService")
 
 	err := p.loadConfig()
@@ -332,7 +332,7 @@ func (p *Program) stopService() error {
 	return nil
 }
 
-func (p *Program) testService() error {
+func (p *Pgosrv) testService() error {
 	Debug("testService")
 
 	if len(os.Args) > 2 {
@@ -364,7 +364,7 @@ func (p *Program) testService() error {
 	return nil
 }
 
-func (p *Program) installService() error {
+func (p *Pgosrv) installService() error {
 	Debug("installService")
 
 	err := p.saveConfig()
@@ -392,7 +392,7 @@ func (p *Program) installService() error {
 	return nil
 }
 
-func (p *Program) uninstallService() error {
+func (p *Pgosrv) uninstallService() error {
 	Debug("uninstallService")
 
 	err := p.loadConfig()
@@ -412,7 +412,7 @@ func (p *Program) uninstallService() error {
 	return nil
 }
 
-func (p *Program) configFilename() string {
+func (p *Pgosrv) configFilename() string {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		configDir = string(filepath.Separator)
@@ -425,7 +425,7 @@ func (p *Program) configFilename() string {
 	return s
 }
 
-func (p *Program) saveConfig() error {
+func (p *Pgosrv) saveConfig() error {
 	Debug("saveConfig")
 
 	path := p.configFilename()
@@ -450,7 +450,7 @@ func (p *Program) saveConfig() error {
 	return nil
 }
 
-func (p *Program) loadConfig() error {
+func (p *Pgosrv) loadConfig() error {
 	Debug("loadConfig")
 
 	path := p.configFilename()
@@ -484,7 +484,7 @@ func (p *Program) loadConfig() error {
 	return nil
 }
 
-func (p *Program) deleteConfig() error {
+func (p *Pgosrv) deleteConfig() error {
 	Debug("deleteConfig")
 
 	path := p.configFilename()
@@ -501,30 +501,12 @@ func (p *Program) deleteConfig() error {
 	return nil
 }
 
-//JavaHome         string
-//JvmOptions       []string
-//Classpath        string
-//JvmMx            string
-//StartMode        string
-//StopMode         string
-//StartClass       string
-//StopClass        string
-//StartMethod      string
-//StopMethod       string
-//StopTimeout      int
-//LogPath          string
-//LogLevel         string
-//LogPrefix        string
-//ServiceUser      string
-//ServicePassword  string
-//PidFile          string
-
 func run() error {
 	if len(os.Args) < 2 {
 		usage()
 	}
 
-	p := &Program{
+	p := &Pgosrv{
 		DisplayName: "ServiceName",
 		Startup:     "manual",
 		JavaHome:    "%JAVA_HOME%",
