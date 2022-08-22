@@ -1,8 +1,8 @@
-## DICOM
+## PGOSRV
 
-### Project description of DICOM
+### Project description of PGOSRV
 
-This is the automatic generated project description of DICOM. Stay tuned for updates :-)
+This is the automatic generated project description of PGOSRV. Stay tuned for updates :-)
 
 ### License
 
