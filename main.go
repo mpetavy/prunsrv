@@ -4,10 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/service"
+	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
+	"regexp"
 	"strconv"
 	"strings"
 )
@@ -219,6 +222,31 @@ func (p *Pgosrv) scanArgs() error {
 	return nil
 }
 
+func resolvEnvParameter(txt string) (string, error) {
+	r, err := regexp.Compile(`\$\{.*?\}`)
+	if Error(err) {
+		return "", err
+	}
+
+	delta := 0
+	pos := r.FindAllStringIndex(txt, -1)
+	for _, p := range pos {
+		p[0] += delta
+		p[1] += delta
+		env := txt[p[0]:p[1]]
+		env = env[2 : len(env)-1]
+
+		str := os.Getenv(env)
+		if str != "" {
+			txt = txt[:p[0]] + str + txt[p[1]:]
+
+			delta += len(str) - (len(env) + 3)
+		}
+	}
+
+	return txt, err
+}
+
 func (p *Pgosrv) exec(asStart bool) error {
 	var args []string
 
@@ -412,23 +440,31 @@ func (p *Pgosrv) uninstallService() error {
 	return nil
 }
 
-func (p *Pgosrv) configFilename() string {
+func configDir() string {
 	configDir, err := os.UserConfigDir()
 	if err != nil {
 		configDir = string(filepath.Separator)
 	}
 
-	s := filepath.Join(configDir, title(), p.Name+".json")
+	configDir = filepath.Join(configDir, title())
 
-	Debug("configFilename", s)
+	Debug("configDir", configDir)
 
-	return s
+	return configDir
+}
+
+func (p *Pgosrv) configFilename(dir string, extension string) string {
+	filename := filepath.Join(dir, p.Name+extension)
+
+	Debug("configFilename", filename)
+
+	return filename
 }
 
 func (p *Pgosrv) saveConfig() error {
 	Debug("saveConfig")
 
-	path := p.configFilename()
+	path := p.configFilename(configDir(), ".json")
 
 	if !fileExists_(path) {
 		err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
@@ -453,7 +489,7 @@ func (p *Pgosrv) saveConfig() error {
 func (p *Pgosrv) loadConfig() error {
 	Debug("loadConfig")
 
-	path := p.configFilename()
+	path := p.configFilename(configDir(), ".json")
 
 	if !fileExists_(path) {
 		return fmt.Errorf("configuration is not available/readable: %s", path)
@@ -487,7 +523,7 @@ func (p *Pgosrv) loadConfig() error {
 func (p *Pgosrv) deleteConfig() error {
 	Debug("deleteConfig")
 
-	path := p.configFilename()
+	path := p.configFilename(configDir(), ".json")
 
 	if !fileExists_(path) {
 		return fmt.Errorf("configuration is not available or readable: %s", path)
@@ -509,14 +545,13 @@ func run() error {
 	p := &Pgosrv{
 		DisplayName: "ServiceName",
 		Startup:     "manual",
-		JavaHome:    "%JAVA_HOME%",
 		Jvm:         "auto",
 		StartClass:  "Main",
 		StartMethod: "main",
 		StopClass:   "Main",
 		StopMethod:  "main",
 		StopTimeout: 0,
-		LogPath:     "%SystemRoot%\\System32\\LogFiles\\Apache",
+		LogPath:     configDir(),
 		LogPrefix:   "commons-daemon",
 		LogLevel:    "Info",
 	}
@@ -524,6 +559,19 @@ func run() error {
 	err := p.scanArgs()
 	if Error(err) {
 		return err
+	}
+
+	if p.LogPath != "" {
+		if fileExists_(p.LogPath) {
+			f, err := os.OpenFile(p.configFilename(p.LogPath, ".log"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm)
+			if Error(err) {
+				return err
+			}
+
+			defer f.Close()
+
+			log.SetOutput(io.MultiWriter(os.Stdout, f))
+		}
 	}
 
 	switch {
