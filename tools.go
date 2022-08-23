@@ -13,6 +13,8 @@ import (
 
 var (
 	lastError string
+	logf      os.File
+	logs      []string
 )
 
 func Error(err error) bool {
@@ -21,7 +23,11 @@ func Error(err error) bool {
 	}
 
 	lastError = err.Error()
-	log.Printf("%s %s", "ERROR", err.Error())
+
+	s := fmt.Sprintf("%s %s", "ERROR", err.Error())
+	logs = append(logs, s+"\n")
+
+	log.Printf(s)
 
 	return true
 }
@@ -33,7 +39,10 @@ func Debug(values ...interface{}) {
 		a = append(a, fmt.Sprintf("%+v", reflect.ValueOf(value)))
 	}
 
-	log.Printf("%s %s", "DEBUG", strings.Join(a, " "))
+	s := fmt.Sprintf("%s %s", "DEBUG", strings.Join(a, " "))
+	logs = append(logs, s+"\n")
+
+	log.Printf(s)
 }
 
 func isWindowsOS() bool {
@@ -106,7 +115,7 @@ func SurroundWidth(strs []string, surround string, separator string) string {
 		resultStrs = append(resultStrs, fmt.Sprintf("\"%s\"", str))
 	}
 
-	result := strings.Join(resultStrs, " ")
+	result := strings.Join(resultStrs, separator)
 
 	Debug("surroundWidth:", result)
 
