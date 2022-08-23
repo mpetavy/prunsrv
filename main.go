@@ -149,6 +149,11 @@ func (p *Pgosrv) scanArgs() error {
 			p.LogPath = ""
 			p.LogPrefix = title()
 			p.LogLevel = "Info"
+
+			err := p.loadConfig()
+			if isError(err) {
+				return err
+			}
 		}
 
 		if strings.HasPrefix(arg, "//US") {
