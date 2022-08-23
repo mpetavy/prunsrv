@@ -4,7 +4,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/service"
-	"golang.org/x/sys/windows"
 	"io"
 	"io/ioutil"
 	"log"
@@ -14,7 +13,6 @@ import (
 	"regexp"
 	"strconv"
 	"strings"
-	"syscall"
 )
 
 var logger service.Logger
@@ -59,11 +57,13 @@ type Pgosrv struct {
 }
 
 func usage() {
-
+	fmt.Println()
+	fmt.Printf("%s - some alternative to Apache Commons...\n", strings.ToUpper(title()))
+	fmt.Printf("Documentation: https://commons.apache.org/proper/commons-daemon/procrun.html\n")
 }
 
 func (p *Pgosrv) scanArgs() error {
-	Debug("scanArgs")
+	debug("scanArgs")
 
 	var err error
 
@@ -95,46 +95,46 @@ func (p *Pgosrv) scanArgs() error {
 		arg := strings.TrimSpace(os.Args[i])
 
 		if strings.HasPrefix(arg, "//TS") {
-			Debug("Action:", "testService")
+			debug("Action:", "testService")
 
 			p.DoTest = true
 
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig()
-			if Error(err) {
+			if isError(err) {
 				return err
 			}
 		}
 
 		if strings.HasPrefix(arg, "//RS") || strings.HasPrefix(arg, "//ES") {
-			Debug("Action:", "startService")
+			debug("Action:", "startService")
 
 			p.DoStart = true
 
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig()
-			if Error(err) {
+			if isError(err) {
 				return err
 			}
 		}
 
 		if strings.HasPrefix(arg, "//SS") {
-			Debug("Action:", "stopService")
+			debug("Action:", "stopService")
 
 			p.DoStop = true
 
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig()
-			if Error(err) {
+			if isError(err) {
 				return err
 			}
 		}
 
 		if strings.HasPrefix(arg, "//IS") {
-			Debug("Action:", "installService")
+			debug("Action:", "installService")
 
 			p.DoInstall = true
 
@@ -152,40 +152,40 @@ func (p *Pgosrv) scanArgs() error {
 		}
 
 		if strings.HasPrefix(arg, "//US") {
-			Debug("Action:", "updateService")
+			debug("Action:", "updateService")
 
 			p.DoUpdate = true
 
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig()
-			if Error(err) {
+			if isError(err) {
 				return err
 			}
 		}
 
 		if strings.HasPrefix(arg, "//DS") {
-			Debug("Action:", "deleteService")
+			debug("Action:", "deleteService")
 
 			p.DoUninstall = true
 
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig()
-			if Error(err) {
+			if isError(err) {
 				return err
 			}
 		}
 
 		if strings.HasPrefix(arg, "//PS") {
-			Debug("Action:", "printService")
+			debug("Action:", "printService")
 
 			p.DoPrint = true
 
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig()
-			if Error(err) {
+			if isError(err) {
 				return err
 			}
 		}
@@ -274,7 +274,7 @@ func (p *Pgosrv) scanArgs() error {
 			value, i = argValue(arg, i)
 
 			p.StopTimeout, err = strconv.Atoi(value)
-			if Error(err) {
+			if isError(err) {
 				return err
 			}
 		}
@@ -309,7 +309,7 @@ func (p *Pgosrv) scanArgs() error {
 
 func resolvEnvParameter(txt string) (string, error) {
 	r, err := regexp.Compile(`\$\{.*?\}`)
-	if Error(err) {
+	if isError(err) {
 		return "", err
 	}
 
@@ -376,10 +376,10 @@ func (p *Pgosrv) exec(asStart bool) error {
 		Stderr: os.Stderr,
 	}
 
-	Debug("execCmd:", SurroundWidth(append([]string{p.Cmd.Path}, p.Cmd.Args...), "\"", " "))
+	debug("execCmd:", surroundWidth(append([]string{p.Cmd.Path}, p.Cmd.Args...), "\"", " "))
 
 	err := p.Cmd.Start()
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -387,10 +387,10 @@ func (p *Pgosrv) exec(asStart bool) error {
 }
 
 func (p *Pgosrv) Start(s service.Service) error {
-	Debug("Start")
+	debug("Start")
 
 	err := p.exec(true)
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -398,10 +398,10 @@ func (p *Pgosrv) Start(s service.Service) error {
 }
 
 func (p *Pgosrv) Stop(s service.Service) error {
-	Debug("Stop")
+	debug("Stop")
 
 	err := p.exec(false)
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -409,7 +409,7 @@ func (p *Pgosrv) Stop(s service.Service) error {
 }
 
 func (p *Pgosrv) printService() error {
-	Debug("printService")
+	debug("printService")
 
 	args := []string{}
 	args = append(args, title())
@@ -439,16 +439,16 @@ func (p *Pgosrv) printService() error {
 	args = append(args, fmt.Sprintf("%s=%s", "--ServicePassword", p.ServicePassword))
 	args = append(args, fmt.Sprintf("%s=%s", "--PidFile", p.PidFile))
 
-	fmt.Printf("%s\n", SurroundWidth(args, "\"", " "))
+	fmt.Printf("%s\n", surroundWidth(args, "\"", " "))
 
 	return nil
 }
 
 func (p *Pgosrv) startService() error {
-	Debug("startService")
+	debug("startService")
 
 	err := p.exec(true)
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -456,10 +456,10 @@ func (p *Pgosrv) startService() error {
 }
 
 func (p *Pgosrv) stopService() error {
-	Debug("stopService")
+	debug("stopService")
 
 	err := p.exec(false)
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -467,10 +467,10 @@ func (p *Pgosrv) stopService() error {
 }
 
 func (p *Pgosrv) testService() error {
-	Debug("testService")
+	debug("testService")
 
 	err := p.startService()
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -484,7 +484,7 @@ func (p *Pgosrv) testService() error {
 	//<-ctrlC
 
 	err = p.stopService()
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -492,29 +492,29 @@ func (p *Pgosrv) testService() error {
 }
 
 func (p *Pgosrv) installService() error {
-	Debug("installService")
+	debug("installService")
 
 	checkAdmin()
 
 	err := p.saveConfig()
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
 	err = p.loadConfig()
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
 	p.Service, err = service.New(p, &p.ServiceConfig)
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
 	service.Control(p.Service, "uninstall")
 
 	err = service.Control(p.Service, "install")
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -522,24 +522,24 @@ func (p *Pgosrv) installService() error {
 }
 
 func (p *Pgosrv) updateService() error {
-	Debug("installService")
+	debug("installService")
 
 	checkAdmin()
 
 	err := p.saveConfig()
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
 	p.Service, err = service.New(p, &p.ServiceConfig)
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
 	service.Control(p.Service, "uninstall")
 
 	err = service.Control(p.Service, "install")
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -547,18 +547,18 @@ func (p *Pgosrv) updateService() error {
 }
 
 func (p *Pgosrv) uninstallService() error {
-	Debug("uninstallService")
+	debug("uninstallService")
 
 	checkAdmin()
 
 	err := p.deleteConfig()
-	Error(err)
+	isError(err)
 
 	p.Service, err = service.New(p, &p.ServiceConfig)
-	Error(err)
+	isError(err)
 
 	err = service.Control(p.Service, "uninstall")
-	Error(err)
+	isError(err)
 
 	return nil
 }
@@ -574,7 +574,7 @@ func configDir() string {
 
 	configDir = filepath.Join(configDir, title())
 
-	Debug("configDir:", configDir)
+	debug("configDir:", configDir)
 
 	return configDir
 }
@@ -582,30 +582,30 @@ func configDir() string {
 func (p *Pgosrv) configFilename(dir string, extension string) string {
 	filename := filepath.Join(dir, p.Name+extension)
 
-	Debug("configFilename:", filename)
+	debug("configFilename:", filename)
 
 	return filename
 }
 
 func (p *Pgosrv) saveConfig() error {
-	Debug("saveConfig")
+	debug("saveConfig")
 
 	path := p.configFilename(configDir(), ".json")
 
 	if !fileExists_(path) {
 		err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
-		if Error(err) {
+		if isError(err) {
 			return err
 		}
 	}
 
 	ba, err := json.MarshalIndent(p, "", "  ")
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
 	err = ioutil.WriteFile(path, ba, os.ModePerm)
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -613,7 +613,7 @@ func (p *Pgosrv) saveConfig() error {
 }
 
 func (p *Pgosrv) loadConfig() error {
-	Debug("loadConfig")
+	debug("loadConfig")
 
 	path := p.configFilename(configDir(), ".json")
 
@@ -622,12 +622,12 @@ func (p *Pgosrv) loadConfig() error {
 	}
 
 	ba, err := ioutil.ReadFile(path)
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
 	err = json.Unmarshal(ba, p)
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -650,7 +650,7 @@ func (p *Pgosrv) loadConfig() error {
 }
 
 func (p *Pgosrv) deleteConfig() error {
-	Debug("deleteConfig")
+	debug("deleteConfig")
 
 	path := p.configFilename(configDir(), ".json")
 
@@ -659,65 +659,26 @@ func (p *Pgosrv) deleteConfig() error {
 	}
 
 	err := os.RemoveAll(filepath.Dir(path))
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
 	return nil
-}
-
-func rerunElevated() error {
-	Debug("rerun elevated")
-
-	verb := "runas"
-	exe, _ := os.Executable()
-	cwd, _ := os.Getwd()
-	args := strings.Join(os.Args[1:], " ")
-
-	verbPtr, _ := syscall.UTF16PtrFromString(verb)
-	exePtr, _ := syscall.UTF16PtrFromString(exe)
-	cwdPtr, _ := syscall.UTF16PtrFromString(cwd)
-	argPtr, _ := syscall.UTF16PtrFromString(args)
-
-	var showCmd int32 = 1 //SW_NORMAL
-
-	err := windows.ShellExecute(0, verbPtr, exePtr, argPtr, cwdPtr, showCmd)
-	if Error(err) {
-		return err
-	}
-
-	return nil
-}
-
-func isAdmin() bool {
-	_, err := os.Open("\\\\.\\PHYSICALDRIVE0")
-	if err != nil {
-		Debug("is running elevated: no")
-		return false
-	}
-
-	Debug("is running elevated: yes")
-
-	return true
-}
-
-func checkAdmin() {
-	if !isAdmin() {
-		Error(rerunElevated())
-	}
 }
 
 func run() error {
-	if len(os.Args) < 2 {
+	if len(os.Args) < 2 || hasFlag("//?") {
 		usage()
+
+		return nil
 	}
 
-	Debug("cmdline:", SurroundWidth(os.Args, "\"", " "))
+	debug("cmdline:", surroundWidth(os.Args, "\"", " "))
 
 	dir := configDir()
 	if !fileExists_(dir) {
 		err := os.MkdirAll(dir, os.ModePerm)
-		if Error(err) {
+		if isError(err) {
 			return err
 		}
 	}
@@ -725,7 +686,7 @@ func run() error {
 	p := &Pgosrv{}
 
 	err := p.scanArgs()
-	if Error(err) {
+	if isError(err) {
 		return err
 	}
 
@@ -733,23 +694,25 @@ func run() error {
 		return fmt.Errorf("missing service name")
 	}
 
-	Debug("Service:", p.Name)
+	debug("Service:", p.Name)
 
 	if p.LogPath != "" {
 		if fileExists_(p.LogPath) {
-			f, err := os.OpenFile(p.configFilename(p.LogPath, ".log"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm)
-			if Error(err) {
+			var err error
+
+			logf, err = os.OpenFile(p.configFilename(p.LogPath, ".log"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm)
+			if isError(err) {
 				return err
 			}
 
 			for _, l := range logs {
-				f.WriteString(l)
+				logf.WriteString(l)
 			}
 
-			defer f.Close()
+			defer logf.Close()
 
 			log.SetPrefix(p.LogPrefix + " ")
-			log.SetOutput(io.MultiWriter(os.Stdout, f))
+			log.SetOutput(io.MultiWriter(os.Stdout, logf))
 		}
 	}
 
@@ -776,5 +739,9 @@ func run() error {
 }
 
 func main() {
-	Error(run())
+	if isError(run()) {
+		os.Exit(1)
+	} else {
+		os.Exit(0)
+	}
 }

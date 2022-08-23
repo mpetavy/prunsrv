@@ -2,22 +2,75 @@ package main
 
 import (
 	"fmt"
+	"golang.org/x/sys/windows"
 	"log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
+	"syscall"
 	"unicode"
 )
 
 var (
 	lastError string
-	logf      os.File
+	logf      *os.File
 	logs      []string
 )
 
-func Error(err error) bool {
+func rerunElevated() error {
+	debug("rerun elevated")
+
+	verb := "runas"
+	exe, _ := os.Executable()
+	cwd, _ := os.Getwd()
+	args := strings.Join(os.Args[1:], " ")
+
+	verbPtr, _ := syscall.UTF16PtrFromString(verb)
+	exePtr, _ := syscall.UTF16PtrFromString(exe)
+	cwdPtr, _ := syscall.UTF16PtrFromString(cwd)
+	argPtr, _ := syscall.UTF16PtrFromString(args)
+
+	var showCmd int32 = 1 //SW_NORMAL
+
+	err := windows.ShellExecute(0, verbPtr, exePtr, argPtr, cwdPtr, showCmd)
+	if isError(err) {
+		return err
+	}
+
+	return nil
+}
+
+func isAdmin() bool {
+	_, err := os.Open("\\\\.\\PHYSICALDRIVE0")
+	if err != nil {
+		debug("is running elevated: no")
+		return false
+	}
+
+	debug("is running elevated: yes")
+
+	return true
+}
+
+func checkAdmin() {
+	if !isAdmin() {
+		isError(rerunElevated())
+	}
+}
+
+func hasFlag(flag string) bool {
+	for _, arg := range os.Args {
+		if arg == flag {
+			return true
+		}
+	}
+
+	return false
+}
+
+func isError(err error) bool {
 	if err == nil || err.Error() == lastError {
 		return false
 	}
@@ -32,7 +85,11 @@ func Error(err error) bool {
 	return true
 }
 
-func Debug(values ...interface{}) {
+func debug(values ...interface{}) {
+	if !hasFlag("--debug") {
+		return
+	}
+
 	var a []string
 
 	for _, value := range values {
@@ -48,7 +105,7 @@ func Debug(values ...interface{}) {
 func isWindowsOS() bool {
 	b := runtime.GOOS == "windows"
 
-	Debug("isWindowsOs:", b)
+	debug("isWindowsOs:", b)
 
 	return b
 }
@@ -64,7 +121,7 @@ func fileExists_(filename string) bool {
 		b = true
 	}
 
-	Debug("fileExists:", filename, b)
+	debug("fileExists:", filename, b)
 
 	return b
 }
@@ -77,7 +134,7 @@ func javaExecutable() string {
 		s = "java"
 	}
 
-	Debug("javaExecutable:", s)
+	debug("javaExecutable:", s)
 
 	return s
 }
@@ -104,12 +161,12 @@ func title() string {
 		}
 	}
 
-	Debug("title:", title)
+	debug("title:", title)
 
 	return title
 }
 
-func SurroundWidth(strs []string, surround string, separator string) string {
+func surroundWidth(strs []string, surround string, separator string) string {
 	resultStrs := []string{}
 	for _, str := range strs {
 		resultStrs = append(resultStrs, fmt.Sprintf("\"%s\"", str))
@@ -117,7 +174,7 @@ func SurroundWidth(strs []string, surround string, separator string) string {
 
 	result := strings.Join(resultStrs, separator)
 
-	Debug("surroundWidth:", result)
+	debug("surroundWidth:", result)
 
 	return result
 }
