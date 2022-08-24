@@ -30,7 +30,7 @@ func openLog() error {
 	dir := configDir()
 	if !fileExists(dir) {
 		err := os.MkdirAll(dir, os.ModePerm)
-		if isError(err) {
+		if checkError(err) {
 			return err
 		}
 	}
@@ -38,7 +38,7 @@ func openLog() error {
 	var err error
 
 	logf, err = os.OpenFile(filepath.Join(dir, title()+",log"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm)
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -68,7 +68,7 @@ func rerunElevated() error {
 	var showCmd int32 = 1 //SW_NORMAL
 
 	err := windows.ShellExecute(0, verbPtr, exePtr, argPtr, cwdPtr, showCmd)
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -89,7 +89,7 @@ func isAdmin() bool {
 
 func checkAdmin() {
 	if !isAdmin() {
-		isError(rerunElevated())
+		checkError(rerunElevated())
 	}
 }
 
@@ -116,7 +116,7 @@ func getFlag(flag string) (bool, string) {
 	return false, ""
 }
 
-func isError(err error) bool {
+func checkError(err error) bool {
 	mu.Lock()
 	defer mu.Unlock()
 

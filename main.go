@@ -124,7 +124,7 @@ func (p *Pgosrv) scanArgs() error {
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
-			if isError(err) {
+			if checkError(err) {
 				return err
 			}
 		}
@@ -137,7 +137,7 @@ func (p *Pgosrv) scanArgs() error {
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
-			if isError(err) {
+			if checkError(err) {
 				return err
 			}
 		}
@@ -150,7 +150,7 @@ func (p *Pgosrv) scanArgs() error {
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
-			if isError(err) {
+			if checkError(err) {
 				return err
 			}
 		}
@@ -163,7 +163,7 @@ func (p *Pgosrv) scanArgs() error {
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
-			if isError(err) {
+			if checkError(err) {
 				return err
 			}
 		}
@@ -186,7 +186,7 @@ func (p *Pgosrv) scanArgs() error {
 			p.LogLevel = "Info"
 
 			err := p.loadConfig(false)
-			if isError(err) {
+			if checkError(err) {
 				return err
 			}
 		}
@@ -199,7 +199,7 @@ func (p *Pgosrv) scanArgs() error {
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
-			if isError(err) {
+			if checkError(err) {
 				return err
 			}
 		}
@@ -212,7 +212,7 @@ func (p *Pgosrv) scanArgs() error {
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
-			if isError(err) {
+			if checkError(err) {
 				return err
 			}
 		}
@@ -225,7 +225,7 @@ func (p *Pgosrv) scanArgs() error {
 			p.Name, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
-			if isError(err) {
+			if checkError(err) {
 				return err
 			}
 		}
@@ -314,7 +314,7 @@ func (p *Pgosrv) scanArgs() error {
 			value, i = argValue(arg, i)
 
 			p.StopTimeout, err = strconv.Atoi(value)
-			if isError(err) {
+			if checkError(err) {
 				return err
 			}
 		}
@@ -373,7 +373,7 @@ func (p *Pgosrv) scanArgs() error {
 	p.ServiceConfig.Option = options
 
 	p.Service, err = service.New(p, &p.ServiceConfig)
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -382,7 +382,7 @@ func (p *Pgosrv) scanArgs() error {
 
 func resolvEnvParameter(txt string) (string, error) {
 	r, err := regexp.Compile(`\$\{.*?\}`)
-	if isError(err) {
+	if checkError(err) {
 		return "", err
 	}
 
@@ -452,7 +452,7 @@ func (p *Pgosrv) exec(asStart bool) error {
 	debug("execCmd:", surroundWidth(append([]string{p.Cmd.Path}, p.Cmd.Args...), "\"", " "))
 
 	err := p.Cmd.Start()
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -463,7 +463,7 @@ func (p *Pgosrv) Start(s service.Service) error {
 	debug("Start")
 
 	go func() {
-		isError(p.exec(true))
+		checkError(p.startService())
 	}()
 
 	return nil
@@ -473,7 +473,7 @@ func (p *Pgosrv) Stop(s service.Service) error {
 	debug("Stop")
 
 	go func() {
-		isError(p.exec(false))
+		checkError(p.stopService())
 	}()
 
 	return nil
@@ -519,8 +519,13 @@ func (p *Pgosrv) startService() error {
 	debug("startService")
 
 	err := p.exec(true)
-	if isError(err) {
+	if checkError(err) {
 		return err
+	}
+
+	b, pidfilename := getFlag("--PidFile")
+	if b {
+		checkError(ioutil.WriteFile(pidfilename, []byte(strconv.Itoa(p.Cmd.Process.Pid)), os.ModePerm))
 	}
 
 	return nil
@@ -530,8 +535,13 @@ func (p *Pgosrv) stopService() error {
 	debug("stopService")
 
 	err := p.exec(false)
-	if isError(err) {
+	if checkError(err) {
 		return err
+	}
+
+	b, pidfilename := getFlag("--PidFile")
+	if b && fileExists(pidfilename) {
+		checkError(os.Remove(pidfilename))
 	}
 
 	return nil
@@ -541,7 +551,7 @@ func (p *Pgosrv) testService() error {
 	debug("testService")
 
 	err := p.startService()
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -551,7 +561,7 @@ func (p *Pgosrv) testService() error {
 	<-ctrlC
 
 	err = p.stopService()
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -564,12 +574,12 @@ func (p *Pgosrv) installService() error {
 	checkAdmin()
 
 	err := p.saveConfig()
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
 	err = p.loadConfig(true)
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -577,7 +587,7 @@ func (p *Pgosrv) installService() error {
 	service.Control(p.Service, "uninstall")
 
 	err = service.Control(p.Service, "install")
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -590,14 +600,14 @@ func (p *Pgosrv) updateService() error {
 	checkAdmin()
 
 	err := p.saveConfig()
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
 	service.Control(p.Service, "uninstall")
 
 	err = service.Control(p.Service, "install")
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -610,12 +620,12 @@ func (p *Pgosrv) uninstallService() error {
 	checkAdmin()
 
 	err := p.deleteConfig()
-	isError(err)
+	checkError(err)
 
 	service.Control(p.Service, "stop")
 
 	err = service.Control(p.Service, "uninstall")
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -653,18 +663,18 @@ func (p *Pgosrv) saveConfig() error {
 
 	if !fileExists(path) {
 		err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
-		if isError(err) {
+		if checkError(err) {
 			return err
 		}
 	}
 
 	ba, err := json.MarshalIndent(p, "", "  ")
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
 	err = ioutil.WriteFile(path, ba, os.ModePerm)
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -686,12 +696,12 @@ func (p *Pgosrv) loadConfig(mustExist bool) error {
 	}
 
 	ba, err := ioutil.ReadFile(path)
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
 	err = json.Unmarshal(ba, p)
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -708,7 +718,7 @@ func (p *Pgosrv) deleteConfig() error {
 	}
 
 	err := os.RemoveAll(filepath.Dir(path))
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -719,7 +729,7 @@ func run() error {
 	banner()
 
 	err := openLog()
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -737,7 +747,7 @@ func run() error {
 	p := &Pgosrv{}
 
 	err = p.scanArgs()
-	if isError(err) {
+	if checkError(err) {
 		return err
 	}
 
@@ -792,7 +802,7 @@ func run() error {
 }
 
 func main() {
-	if isError(run()) {
+	if checkError(run()) {
 		os.Exit(1)
 	} else {
 		os.Exit(0)
