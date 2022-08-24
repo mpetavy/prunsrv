@@ -2,7 +2,14 @@
 
 ### Project description of PRUNSRV
 
-This is the automatic generated project description of PRUNSRV. Stay tuned for updates :-)
+Just developed to get around some Apache PRUNSRV problems with the latest version 1.3.1
+
+Your welcome to use this solution.
+
+Most of the original parameters are working the same.
+Please consider the original PRUNSRV which can be found at
+https://commons.apache.org/proper/commons-daemon/procrun.html
+
 
 ### License
 

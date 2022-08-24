@@ -352,12 +352,25 @@ func (p *Pgosrv) scanArgs() error {
 		p.ServiceConfig.DisplayName = p.ServiceConfig.Name
 	}
 	p.ServiceConfig.UserName = p.ServiceUser
-	if p.ServicePassword != "" {
-		option := service.KeyValue{}
-		option["Password"] = p.ServicePassword
 
-		p.ServiceConfig.Option = option
+	options := service.KeyValue{}
+
+	if p.ServicePassword != "" {
+		options["Password"] = p.ServicePassword
 	}
+
+	options["StartType"] = "automatic"
+
+	switch p.Startup {
+	case "manual":
+		options["StartType"] = "manual"
+	case "delayed":
+		options["DelayedAutoStart"] = "true"
+	case "disabled":
+		options["StartType"] = "disabled"
+	}
+
+	p.ServiceConfig.Option = options
 
 	p.Service, err = service.New(p, &p.ServiceConfig)
 	if isError(err) {
@@ -560,6 +573,7 @@ func (p *Pgosrv) installService() error {
 		return err
 	}
 
+	service.Control(p.Service, "stop")
 	service.Control(p.Service, "uninstall")
 
 	err = service.Control(p.Service, "install")
@@ -598,8 +612,12 @@ func (p *Pgosrv) uninstallService() error {
 	err := p.deleteConfig()
 	isError(err)
 
+	service.Control(p.Service, "stop")
+
 	err = service.Control(p.Service, "uninstall")
-	isError(err)
+	if isError(err) {
+		return err
+	}
 
 	return nil
 }
