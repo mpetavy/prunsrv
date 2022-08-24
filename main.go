@@ -55,6 +55,20 @@ type Pgosrv struct {
 	PidFile         string   `json:"PidFile"`
 }
 
+const (
+	version = "1.0.0"
+)
+
+func banner() {
+	fmt.Printf("\n")
+	fmt.Printf("%s %s %s\n", strings.ToUpper(title()), version, "A GO based alternative to Apache PRUNSRV")
+	fmt.Printf("\n")
+	fmt.Printf("Copyright: © %s %s\n", "2022", "mpetavy")
+	fmt.Printf("Homepage:  %s\n", "https://github.com/mpetavy/prunsrv")
+	fmt.Printf("License:   %s\n", "https://www.apache.org/licenses/LICENSE-2.0.html")
+	fmt.Printf("\n")
+}
+
 func usage() {
 	debug("usage")
 
@@ -681,6 +695,8 @@ func (p *Pgosrv) deleteConfig() error {
 }
 
 func run() error {
+	banner()
+
 	err := openLog()
 	if isError(err) {
 		return err
