@@ -17,7 +17,7 @@ import (
 
 var logger service.Logger
 
-type Pgosrv struct {
+type Prunsrv struct {
 	DoTest        bool            `json:"-"`
 	DoService     bool            `json:"-"`
 	DoStart       bool            `json:"-"`
@@ -84,7 +84,7 @@ func usage() {
 	fmt.Fprintf(os.Stderr, "https://commons.apache.org/proper/commons-daemon/procrun.html\n")
 }
 
-func (p *Pgosrv) scanArgs() error {
+func (p *Prunsrv) scanArgs() error {
 	debug("scanArgs")
 
 	var err error
@@ -405,7 +405,7 @@ func resolvEnvParameter(txt string) (string, error) {
 	return txt, err
 }
 
-func (p *Pgosrv) exec(asStart bool) error {
+func (p *Prunsrv) exec(asStart bool) error {
 	var args []string
 
 	if p.JvmMx != "" {
@@ -459,7 +459,7 @@ func (p *Pgosrv) exec(asStart bool) error {
 	return nil
 }
 
-func (p *Pgosrv) Start(s service.Service) error {
+func (p *Prunsrv) Start(s service.Service) error {
 	debug("Start")
 
 	go func() {
@@ -469,7 +469,7 @@ func (p *Pgosrv) Start(s service.Service) error {
 	return nil
 }
 
-func (p *Pgosrv) Stop(s service.Service) error {
+func (p *Prunsrv) Stop(s service.Service) error {
 	debug("Stop")
 
 	go func() {
@@ -479,7 +479,7 @@ func (p *Pgosrv) Stop(s service.Service) error {
 	return nil
 }
 
-func (p *Pgosrv) printService() error {
+func (p *Prunsrv) printService() error {
 	debug("printService")
 
 	args := []string{}
@@ -515,7 +515,7 @@ func (p *Pgosrv) printService() error {
 	return nil
 }
 
-func (p *Pgosrv) startService() error {
+func (p *Prunsrv) startService() error {
 	debug("startService")
 
 	err := p.exec(true)
@@ -531,7 +531,7 @@ func (p *Pgosrv) startService() error {
 	return nil
 }
 
-func (p *Pgosrv) stopService() error {
+func (p *Prunsrv) stopService() error {
 	debug("stopService")
 
 	err := p.exec(false)
@@ -547,7 +547,7 @@ func (p *Pgosrv) stopService() error {
 	return nil
 }
 
-func (p *Pgosrv) testService() error {
+func (p *Prunsrv) testService() error {
 	debug("testService")
 
 	err := p.startService()
@@ -568,7 +568,7 @@ func (p *Pgosrv) testService() error {
 	return nil
 }
 
-func (p *Pgosrv) installService() error {
+func (p *Prunsrv) installService() error {
 	debug("installService")
 
 	checkAdmin()
@@ -594,7 +594,7 @@ func (p *Pgosrv) installService() error {
 	return nil
 }
 
-func (p *Pgosrv) updateService() error {
+func (p *Prunsrv) updateService() error {
 	debug("installService")
 
 	checkAdmin()
@@ -614,7 +614,7 @@ func (p *Pgosrv) updateService() error {
 	return nil
 }
 
-func (p *Pgosrv) uninstallService() error {
+func (p *Prunsrv) uninstallService() error {
 	debug("uninstallService")
 
 	checkAdmin()
@@ -648,7 +648,7 @@ func configDir() string {
 	return configDir
 }
 
-func (p *Pgosrv) configFilename(dir string, extension string) string {
+func (p *Prunsrv) configFilename(dir string, extension string) string {
 	filename := filepath.Join(dir, p.Name+extension)
 
 	debug("configFilename:", filename)
@@ -656,7 +656,7 @@ func (p *Pgosrv) configFilename(dir string, extension string) string {
 	return filename
 }
 
-func (p *Pgosrv) saveConfig() error {
+func (p *Prunsrv) saveConfig() error {
 	debug("saveConfig")
 
 	path := p.configFilename(configDir(), ".json")
@@ -681,7 +681,7 @@ func (p *Pgosrv) saveConfig() error {
 	return nil
 }
 
-func (p *Pgosrv) loadConfig(mustExist bool) error {
+func (p *Prunsrv) loadConfig(mustExist bool) error {
 	debug("loadConfig")
 
 	path := p.configFilename(configDir(), ".json")
@@ -708,7 +708,7 @@ func (p *Pgosrv) loadConfig(mustExist bool) error {
 	return nil
 }
 
-func (p *Pgosrv) deleteConfig() error {
+func (p *Prunsrv) deleteConfig() error {
 	debug("deleteConfig")
 
 	path := p.configFilename(configDir(), ".json")
@@ -744,7 +744,7 @@ func run() error {
 
 	debug("cmdline:", surroundWidth(os.Args, "\"", " "))
 
-	p := &Pgosrv{}
+	p := &Prunsrv{}
 
 	err = p.scanArgs()
 	if checkError(err) {
