@@ -1,8 +1,8 @@
-## PGOSRV
+## PRUNSRV
 
-### Project description of PGOSRV
+### Project description of PRUNSRV
 
-This is the automatic generated project description of PGOSRV. Stay tuned for updates :-)
+This is the automatic generated project description of PRUNSRV. Stay tuned for updates :-)
 
 ### License
 
