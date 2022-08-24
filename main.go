@@ -73,10 +73,14 @@ func usage() {
 	debug("usage")
 
 	fmt.Fprintf(os.Stderr, "Just developed to get around some Apache PRUNSRV problems.\n")
+	fmt.Fprintf(os.Stderr, "Could not wait on Apache issue solving...\n")
 	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Your welcome to this solution.\n")
+	fmt.Fprintf(os.Stderr, "You are welcome to use this solution on your own risk.\n")
 	fmt.Fprintf(os.Stderr, "Most of the original parameters are working the same.\n")
-	fmt.Fprintf(os.Stderr, "But please consider the original PRUNSRV which can be found at\n")
+	fmt.Fprintf(os.Stderr, "Parameters which are not known are simply ignored.\n")
+	fmt.Fprintf(os.Stderr, "Documentation can be found on the Github project page.\n")
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "Please consider the original PRUNSRV which can be found at\n")
 	fmt.Fprintf(os.Stderr, "https://commons.apache.org/proper/commons-daemon/procrun.html\n")
 }
 
