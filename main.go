@@ -30,9 +30,8 @@ type Prunsrv struct {
 	Service       service.Service `json:"-"`
 	Cmd           *exec.Cmd       `json:"-"`
 
-	Name            string   `json:"Name"`
-	Description     string   `json:"Description"`
 	DisplayName     string   `json:"DisplayName"`
+	Description     string   `json:"Description"`
 	StartPath       string   `json:"StartPath"`
 	Startup         string   `json:"Startup"`
 	JavaHome        string   `json:"JavaHome"`
@@ -55,7 +54,7 @@ type Prunsrv struct {
 }
 
 const (
-	version = "1.0.0"
+	version = "1.0.1"
 )
 
 func banner() {
@@ -118,7 +117,7 @@ func (p *Prunsrv) scanArgs() error {
 
 			p.DoTest = true
 
-			p.Name, i = argValue(arg, i)
+			p.DisplayName, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
 			if checkError(err) {
@@ -131,7 +130,7 @@ func (p *Prunsrv) scanArgs() error {
 
 			p.DoService = true
 
-			p.Name, i = argValue(arg, i)
+			p.DisplayName, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
 			if checkError(err) {
@@ -144,7 +143,7 @@ func (p *Prunsrv) scanArgs() error {
 
 			p.DoStart = true
 
-			p.Name, i = argValue(arg, i)
+			p.DisplayName, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
 			if checkError(err) {
@@ -157,7 +156,7 @@ func (p *Prunsrv) scanArgs() error {
 
 			p.DoStop = true
 
-			p.Name, i = argValue(arg, i)
+			p.DisplayName, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
 			if checkError(err) {
@@ -170,7 +169,7 @@ func (p *Prunsrv) scanArgs() error {
 
 			p.DoInstall = true
 
-			p.Name, i = argValue(arg, i)
+			p.DisplayName, i = argValue(arg, i)
 			p.Startup = "manual"
 			p.StartClass = "Service"
 			p.StartMethod = "start"
@@ -192,7 +191,7 @@ func (p *Prunsrv) scanArgs() error {
 
 			p.DoUpdate = true
 
-			p.Name, i = argValue(arg, i)
+			p.DisplayName, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
 			if checkError(err) {
@@ -205,7 +204,7 @@ func (p *Prunsrv) scanArgs() error {
 
 			p.DoUninstall = true
 
-			p.Name, i = argValue(arg, i)
+			p.DisplayName, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
 			if checkError(err) {
@@ -218,7 +217,7 @@ func (p *Prunsrv) scanArgs() error {
 
 			p.DoPrint = true
 
-			p.Name, i = argValue(arg, i)
+			p.DisplayName, i = argValue(arg, i)
 
 			err := p.loadConfig(true)
 			if checkError(err) {
@@ -323,8 +322,8 @@ func (p *Prunsrv) scanArgs() error {
 
 	isDebug = isDebug || "debug" == p.LogLevel
 
-	p.ServiceConfig.Name = p.Name
-	p.ServiceConfig.Arguments = []string{fmt.Sprintf("//RS//%s", p.Name)}
+	p.ServiceConfig.Name = p.DisplayName
+	p.ServiceConfig.Arguments = []string{fmt.Sprintf("//RS//%s", p.DisplayName)}
 	p.ServiceConfig.Description = p.Description
 	p.ServiceConfig.DisplayName = p.DisplayName
 	if p.ServiceConfig.DisplayName == "" {
@@ -463,7 +462,7 @@ func (p *Prunsrv) printService() error {
 
 	args := []string{}
 	args = append(args, title())
-	args = append(args, fmt.Sprintf("//TS//%s", p.Name))
+	args = append(args, fmt.Sprintf("//TS//%s", p.DisplayName))
 	args = append(args, fmt.Sprintf("%s=%s", "--Description", p.Description))
 	args = append(args, fmt.Sprintf("%s=%s", "--DisplayName", p.DisplayName))
 	args = append(args, fmt.Sprintf("%s=%s", "--StartPath", p.StartPath))
@@ -650,7 +649,7 @@ func configDir() string {
 }
 
 func (p *Prunsrv) configFilename(dir string, extension string) string {
-	filename := filepath.Join(dir, p.Name+extension)
+	filename := filepath.Join(dir, p.DisplayName+extension)
 
 	debug("configFilename:", filename)
 
@@ -755,11 +754,11 @@ func run() error {
 		return err
 	}
 
-	if p.Name == "" {
+	if p.DisplayName == "" {
 		return fmt.Errorf("missing service name")
 	}
 
-	debug("Service:", p.Name)
+	debug("Service:", p.DisplayName)
 
 	//if p.LogPath != "" {
 	//	if fileExists(p.LogPath) {

@@ -22,16 +22,18 @@ https://commons.apache.org/proper/commons-daemon/procrun.html
 
 ### Supported commands
 
-| Command              | Description                                                      |
-|----------------------| ---------------------------------------------------------------- |
-| //TS//<service name> | Run (test) the service in your console                           |
-| //RS//<service name> | Used by the OS service manager to start the service as a service |
-| //ES//<service name> | Start the service                                                |
-| //SS//<service name> | Stop the service                                                 |
-| //IS//<service name> | Install the services in the OS service manager                   |
-| //US//<service name> | Uninstall the services in the OS service manager                 |
-| //PS//<service name> | Print the current saved configuration in callable format         |
-| //?                  | Shows help                                                       |
+The term "myservice" is the actual name of the configured service.
+
+| Command         | Description                                                      |
+| --------------- | ---------------------------------------------------------------- |
+| //TS//myservice | Run (test) the service in your console                           |
+| //RS//myservice | Used by the OS service manager to start the service as a service |
+| //ES//myservice | Start the service                                                |
+| //SS//myservice | Stop the service                                                 |
+| //IS//myservice | Install the services in the OS service manager                   |
+| //US//myservice | Uninstall the services in the OS service manager                 |
+| //PS//myservice | Print the current saved configuration in callable format         |
+| //?             | Shows help                                                       |
 
 ### Support parameters
 
@@ -58,6 +60,10 @@ https://commons.apache.org/proper/commons-daemon/procrun.html
 | ServiceUser     |         | Username of the user under which service is run                     |
 | ServicePassword |         | Password of the user under which service is run                     |
 | PidFile         |         | Path to store the serice PID                                        |
+
+### PRUNSRV in debug mode
+
+Use the paramater "--debug" to run PRUNSRV in debug mode.
 
 ### Samples
 
