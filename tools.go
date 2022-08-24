@@ -19,11 +19,8 @@ var (
 	lastError string
 	logf      *os.File
 	mu        sync.Mutex
+	isDebug   bool
 	logs      []string
-)
-
-const (
-	DEBUG = "--debug"
 )
 
 func openLog() error {
@@ -126,7 +123,7 @@ func checkError(err error) bool {
 
 	lastError = err.Error()
 
-	if isDebug() {
+	if isDebug {
 		s := fmt.Sprintf("%s %s", "ERROR", err.Error())
 		logs = append(logs, s+"\n")
 
@@ -138,23 +135,13 @@ func checkError(err error) bool {
 	return true
 }
 
-func isDebug() bool {
-	b, _ := getFlag(DEBUG)
-
-	return b
-}
-
 func debug(values ...interface{}) {
-	if !isDebug() {
+	if !isDebug {
 		return
 	}
 
 	mu.Lock()
 	defer mu.Unlock()
-
-	//if !hasFlag("--debug") {
-	//	return
-	//}
 
 	var a []string
 
@@ -232,15 +219,13 @@ func title() string {
 	return title
 }
 
-func surroundWidth(strs []string, surround string, separator string) string {
+func surroundWidth(strs []string, surround string) []string {
 	resultStrs := []string{}
 	for _, str := range strs {
 		resultStrs = append(resultStrs, fmt.Sprintf("\"%s\"", str))
 	}
 
-	result := strings.Join(resultStrs, separator)
+	debug("surroundWidth:", resultStrs)
 
-	debug("surroundWidth:", result)
-
-	return result
+	return resultStrs
 }

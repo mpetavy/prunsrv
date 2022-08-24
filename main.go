@@ -38,17 +38,14 @@ type Prunsrv struct {
 	JavaHome        string   `json:"JavaHome"`
 	JvmOptions      []string `json:"JvmOptions"`
 	Classpath       string   `json:"Classpath"`
-	Jvm             string   `json:"Jvm"`
 	JvmMx           string   `json:"JvmMx"`
 	JvmMs           string   `json:"JvmMs"`
 	JvmSs           string   `json:"JvmSs"`
-	StartMode       string   `json:"StartMode"`
-	StopMode        string   `json:"StopMode"`
 	StartClass      string   `json:"StartClass"`
 	StopClass       string   `json:"StopClass"`
 	StartMethod     string   `json:"StartMethod"`
 	StopMethod      string   `json:"StopMethod"`
-	StopTimeout     int      `json:"StopTimeout"`
+	StopTimeout     string   `json:"StopTimeout"`
 	LogPath         string   `json:"LogPath"`
 	LogLevel        string   `json:"LogLevel"`
 	LogPrefix       string   `json:"LogPrefix"`
@@ -175,15 +172,14 @@ func (p *Prunsrv) scanArgs() error {
 
 			p.Name, i = argValue(arg, i)
 			p.Startup = "manual"
-			p.Jvm = "auto"
-			p.StartClass = "Main"
-			p.StartMethod = "main"
-			p.StopClass = "Main"
-			p.StopMethod = "main"
-			p.StopTimeout = 20
+			p.StartClass = "Service"
+			p.StartMethod = "start"
+			p.StopClass = "Service"
+			p.StopMethod = "stop"
+			p.StopTimeout = "20"
 			p.LogPath = ""
 			p.LogPrefix = title()
-			p.LogLevel = "Info"
+			p.LogLevel = "info"
 
 			err := p.loadConfig(false)
 			if checkError(err) {
@@ -280,18 +276,6 @@ func (p *Prunsrv) scanArgs() error {
 			p.JvmSs, i = argValue(arg, i)
 		}
 
-		if strings.HasPrefix(arg, "--Jvm=") || arg == "--Jvm" {
-			p.Jvm, i = argValue(arg, i)
-		}
-
-		if strings.HasPrefix(arg, "--StartMode") {
-			p.StartMode, i = argValue(arg, i)
-		}
-
-		if strings.HasPrefix(arg, "--StopMode") {
-			p.StopMode, i = argValue(arg, i)
-		}
-
 		if strings.HasPrefix(arg, "--StartClass") {
 			p.StartClass, i = argValue(arg, i)
 		}
@@ -309,14 +293,7 @@ func (p *Prunsrv) scanArgs() error {
 		}
 
 		if strings.HasPrefix(arg, "--StopTimeout") {
-			var value string
-
-			value, i = argValue(arg, i)
-
-			p.StopTimeout, err = strconv.Atoi(value)
-			if checkError(err) {
-				return err
-			}
+			p.StopTimeout, i = argValue(arg, i)
 		}
 
 		if strings.HasPrefix(arg, "--LogPath") {
@@ -343,6 +320,8 @@ func (p *Prunsrv) scanArgs() error {
 			p.PidFile, i = argValue(arg, i)
 		}
 	}
+
+	isDebug = isDebug || "debug" == p.LogLevel
 
 	p.ServiceConfig.Name = p.Name
 	p.ServiceConfig.Arguments = []string{fmt.Sprintf("//RS//%s", p.Name)}
@@ -449,7 +428,7 @@ func (p *Prunsrv) exec(asStart bool) error {
 		Stderr: os.Stderr,
 	}
 
-	debug("execCmd:", surroundWidth(append([]string{p.Cmd.Path}, p.Cmd.Args...), "\"", " "))
+	debug("execCmd:", strings.Join(surroundWidth(append([]string{p.Cmd.Path}, p.Cmd.Args...), "\""), " "))
 
 	err := p.Cmd.Start()
 	if checkError(err) {
@@ -490,14 +469,19 @@ func (p *Prunsrv) printService() error {
 	args = append(args, fmt.Sprintf("%s=%s", "--StartPath", p.StartPath))
 	args = append(args, fmt.Sprintf("%s=%s", "--Startup", p.Startup))
 	args = append(args, fmt.Sprintf("%s=%s", "--JavaHome", p.JavaHome))
-	args = append(args, fmt.Sprintf("%s=%s", "--JvmOptions", p.JvmOptions))
+	for i := 0; i < len(p.JvmOptions); i++ {
+		var prefix string
+		if i == 0 {
+			prefix = "--"
+		} else {
+			prefix = "++"
+		}
+		args = append(args, fmt.Sprintf("%s%s=%s", prefix, "JvmOptions", p.JvmOptions[i]))
+	}
 	args = append(args, fmt.Sprintf("%s=%s", "--Classpath", p.Classpath))
-	args = append(args, fmt.Sprintf("%s=%s", "--Jvm", p.Jvm))
 	args = append(args, fmt.Sprintf("%s=%s", "--JvmMx", p.JvmMx))
 	args = append(args, fmt.Sprintf("%s=%s", "--JvmMs", p.JvmMs))
 	args = append(args, fmt.Sprintf("%s=%s", "--JvmSs", p.JvmSs))
-	args = append(args, fmt.Sprintf("%s=%s", "--StartMode", p.StopMode))
-	args = append(args, fmt.Sprintf("%s=%s", "--StopMode", p.StopMode))
 	args = append(args, fmt.Sprintf("%s=%s", "--StartClass", p.StartClass))
 	args = append(args, fmt.Sprintf("%s=%s", "--StopClass", p.StopClass))
 	args = append(args, fmt.Sprintf("%s=%s", "--StartMethod", p.StartMethod))
@@ -510,7 +494,24 @@ func (p *Prunsrv) printService() error {
 	args = append(args, fmt.Sprintf("%s=%s", "--ServicePassword", p.ServicePassword))
 	args = append(args, fmt.Sprintf("%s=%s", "--PidFile", p.PidFile))
 
-	fmt.Printf("%s\n", surroundWidth(args, "\"", " "))
+	var argSep string
+	var lineSep string
+
+	if isWindowsOS() {
+		argSep = "\""
+		lineSep = "^"
+	} else {
+		argSep = "'"
+		lineSep = "\\"
+	}
+
+	args = surroundWidth(args, argSep)
+
+	for i := 0; i < len(args)-1; i++ {
+		args[i] = fmt.Sprintf("%s %s\n", args[i], lineSep)
+	}
+
+	fmt.Printf("%s\n", strings.Join(args, "  "))
 
 	return nil
 }
@@ -726,6 +727,9 @@ func (p *Prunsrv) deleteConfig() error {
 }
 
 func run() error {
+	b, _ := getFlag("--debug")
+	isDebug = b
+
 	banner()
 
 	err := openLog()
@@ -735,14 +739,14 @@ func run() error {
 
 	defer closeLog()
 
-	b, _ := getFlag("//?")
+	b, _ = getFlag("//?")
 	if len(os.Args) < 2 || b {
 		usage()
 
 		return nil
 	}
 
-	debug("cmdline:", surroundWidth(os.Args, "\"", " "))
+	debug("cmdline:", strings.Join(surroundWidth(os.Args, "\""), " "))
 
 	p := &Prunsrv{}
 
