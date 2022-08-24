@@ -3,12 +3,14 @@ package main
 import (
 	"fmt"
 	"golang.org/x/sys/windows"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
 	"reflect"
 	"runtime"
 	"strings"
+	"sync"
 	"syscall"
 	"unicode"
 )
@@ -16,8 +18,34 @@ import (
 var (
 	lastError string
 	logf      *os.File
+	mu        sync.Mutex
 	logs      []string
 )
+
+func openLog() error {
+	dir := configDir()
+	if !fileExists(dir) {
+		err := os.MkdirAll(dir, os.ModePerm)
+		if isError(err) {
+			return err
+		}
+	}
+
+	var err error
+
+	logf, err = os.OpenFile(filepath.Join(dir, title()+",log"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	if isError(err) {
+		return err
+	}
+
+	log.SetOutput(io.MultiWriter(os.Stdout, logf))
+
+	return nil
+}
+
+func closeLog() {
+	logf.Close()
+}
 
 func rerunElevated() error {
 	debug("rerun elevated")
@@ -71,6 +99,9 @@ func hasFlag(flag string) bool {
 }
 
 func isError(err error) bool {
+	mu.Lock()
+	defer mu.Unlock()
+
 	if err == nil || err.Error() == lastError {
 		return false
 	}
@@ -86,9 +117,12 @@ func isError(err error) bool {
 }
 
 func debug(values ...interface{}) {
-	if !hasFlag("--debug") {
-		return
-	}
+	mu.Lock()
+	defer mu.Unlock()
+
+	//if !hasFlag("--debug") {
+	//	return
+	//}
 
 	var a []string
 
@@ -110,7 +144,7 @@ func isWindowsOS() bool {
 	return b
 }
 
-func fileExists_(filename string) bool {
+func fileExists(filename string) bool {
 	_, err := os.Stat(filename)
 
 	var b bool
