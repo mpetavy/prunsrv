@@ -22,6 +22,10 @@ var (
 	logs      []string
 )
 
+const (
+	DEBUG = "--debug"
+)
+
 func openLog() error {
 	dir := configDir()
 	if !fileExists(dir) {
@@ -38,6 +42,7 @@ func openLog() error {
 		return err
 	}
 
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	log.SetOutput(io.MultiWriter(os.Stdout, logf))
 
 	return nil
@@ -88,14 +93,27 @@ func checkAdmin() {
 	}
 }
 
-func hasFlag(flag string) bool {
-	for _, arg := range os.Args {
-		if arg == flag {
-			return true
+func getFlag(flag string) (bool, string) {
+	for i := 0; i < len(os.Args); i++ {
+		arg := strings.TrimSpace(os.Args[i])
+
+		if arg == flag || strings.HasPrefix(arg, flag+"=") {
+			p := strings.Index(arg, "=")
+			if p != -1 {
+				arg = strings.TrimSpace(arg[p+1:])
+
+				return true, arg
+			}
+
+			if i+1 < len(os.Args) {
+				return true, os.Args[i+1]
+			}
+
+			return true, ""
 		}
 	}
 
-	return false
+	return false, ""
 }
 
 func isError(err error) bool {
@@ -103,20 +121,34 @@ func isError(err error) bool {
 	defer mu.Unlock()
 
 	if err == nil || err.Error() == lastError {
-		return false
+		return err != nil
 	}
 
 	lastError = err.Error()
 
-	s := fmt.Sprintf("%s %s", "ERROR", err.Error())
-	logs = append(logs, s+"\n")
+	if isDebug() {
+		s := fmt.Sprintf("%s %s", "ERROR", err.Error())
+		logs = append(logs, s+"\n")
 
-	log.Printf(s)
+		log.Printf(s)
+	} else {
+		fmt.Fprint(os.Stderr, err.Error()+"\n")
+	}
 
 	return true
 }
 
+func isDebug() bool {
+	b, _ := getFlag(DEBUG)
+
+	return b
+}
+
 func debug(values ...interface{}) {
+	if !isDebug() {
+		return
+	}
+
 	mu.Lock()
 	defer mu.Unlock()
 

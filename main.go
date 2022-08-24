@@ -7,10 +7,12 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
+	"os/signal"
 	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
+	"syscall"
 )
 
 var logger service.Logger
@@ -60,21 +62,26 @@ const (
 )
 
 func banner() {
-	fmt.Printf("\n")
-	fmt.Printf("%s %s %s\n", strings.ToUpper(title()), version, "A GO based alternative to Apache PRUNSRV")
-	fmt.Printf("\n")
-	fmt.Printf("Copyright: © %s %s\n", "2022", "mpetavy")
-	fmt.Printf("Homepage:  %s\n", "https://github.com/mpetavy/prunsrv")
-	fmt.Printf("License:   %s\n", "https://www.apache.org/licenses/LICENSE-2.0.html")
-	fmt.Printf("\n")
+	debug("banner")
+
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "%s %s - %s\n", strings.ToUpper(title()), version, "A GO based alternative to Apache PRUNSRV")
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "Copyright: © %s %s\n", "2022", "mpetavy")
+	fmt.Fprintf(os.Stderr, "Homepage:  %s\n", "https://github.com/mpetavy/prunsrv")
+	fmt.Fprintf(os.Stderr, "License:   %s\n", "https://www.apache.org/licenses/LICENSE-2.0.html")
+	fmt.Fprintf(os.Stderr, "\n")
 }
 
 func usage() {
 	debug("usage")
 
-	fmt.Println()
-	fmt.Printf("%s - some alternative to Apache Commons...\n", strings.ToUpper(title()))
-	fmt.Printf("Documentation: https://commons.apache.org/proper/commons-daemon/procrun.html\n")
+	fmt.Fprintf(os.Stderr, "Just developed to get around some Apache PRUNSRV problems.\n")
+	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Fprintf(os.Stderr, "Your welcome to this solution.\n")
+	fmt.Fprintf(os.Stderr, "Most of the original parameters are working the same.\n")
+	fmt.Fprintf(os.Stderr, "But please consider the original PRUNSRV which can be found at\n")
+	fmt.Fprintf(os.Stderr, "https://commons.apache.org/proper/commons-daemon/procrun.html\n")
 }
 
 func (p *Pgosrv) scanArgs() error {
@@ -525,14 +532,10 @@ func (p *Pgosrv) testService() error {
 		return err
 	}
 
-	var str string
+	ctrlC := make(chan os.Signal, 1)
+	signal.Notify(ctrlC, os.Interrupt, syscall.SIGTERM)
 
-	fmt.Scan(&str)
-
-	//ctrlC := make(chan os.Signal, 1)
-	//signal.Notify(ctrlC, os.Interrupt, syscall.SIGTERM)
-	//
-	//<-ctrlC
+	<-ctrlC
 
 	err = p.stopService()
 	if isError(err) {
@@ -704,7 +707,8 @@ func run() error {
 
 	defer closeLog()
 
-	if len(os.Args) < 2 || hasFlag("//?") {
+	b, _ := getFlag("//?")
+	if len(os.Args) < 2 || b {
 		usage()
 
 		return nil
