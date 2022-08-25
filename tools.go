@@ -58,8 +58,6 @@ func openLog() error {
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
 	log.SetOutput(MWriter(logf, os.Stderr))
 
-	log.Printf(strings.Repeat("-", 100))
-
 	return nil
 }
 

@@ -572,8 +572,6 @@ func (p *Prunsrv) startService() error {
 		if checkError(err) {
 			return err
 		}
-
-		p.Logf.WriteString(strings.Repeat("-", 100) + "\n")
 	}
 
 	var err error
