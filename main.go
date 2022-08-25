@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/kardianos/service"
+	"io"
 	"io/ioutil"
 	"os"
 	"os/exec"
@@ -31,6 +32,7 @@ type Prunsrv struct {
 	Service       service.Service `json:"-"`
 	StartCmd      *exec.Cmd       `json:"-"`
 	StopCmd       *exec.Cmd       `json:"-"`
+	Logf          *os.File        `json:"-"`
 
 	DisplayName     string   `json:"DisplayName"`
 	Description     string   `json:"Description"`
@@ -424,13 +426,18 @@ func (p *Prunsrv) exec(asStart bool) (*exec.Cmd, error) {
 		args = append(args, p.StopMethod)
 	}
 
+	iowriter := io.Discard
+	if p.Logf != nil {
+		iowriter = p.Logf
+	}
+
 	cmd := &exec.Cmd{
 		Path:   filepath.Join(p.JavaHome, "bin", javaExecutable()),
 		Args:   args,
 		Env:    nil,
 		Dir:    p.StartPath,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
+		Stdout: io.MultiWriter(os.Stdout, iowriter),
+		Stderr: io.MultiWriter(os.Stderr, iowriter),
 	}
 
 	debug("execCmd:", strings.Join(surroundWidth(append([]string{cmd.Path}, cmd.Args...), "\""), " "))
@@ -546,6 +553,23 @@ func (p *Prunsrv) printService() error {
 func (p *Prunsrv) startService() error {
 	debug("startService")
 
+	if p.LogPath != "" {
+		filename := p.configFilename(p.LogPath, ".log")
+		if !fileExists(filename) {
+			err := os.MkdirAll(filepath.Dir(filename), os.ModePerm)
+			if checkError(err) {
+				return err
+			}
+		}
+
+		var err error
+
+		p.Logf, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm)
+		if checkError(err) {
+			return err
+		}
+	}
+
 	var err error
 
 	p.StartCmd, err = p.exec(true)
@@ -569,6 +593,13 @@ func (p *Prunsrv) stopService() error {
 	p.StopCmd, err = p.exec(false)
 	if checkError(err) {
 		return err
+	}
+
+	if p.Logf != nil {
+		err = p.Logf.Close()
+		if checkError(err) {
+			return err
+		}
 	}
 
 	b, pidfilename := getFlag("--PidFile")
@@ -691,10 +722,10 @@ func (p *Prunsrv) configFilename(dir string, extension string) string {
 func (p *Prunsrv) saveConfig() error {
 	debug("saveConfig")
 
-	path := p.configFilename(configDir(), ".json")
+	filename := p.configFilename(configDir(), ".json")
 
-	if !fileExists(path) {
-		err := os.MkdirAll(filepath.Dir(path), os.ModePerm)
+	if !fileExists(filename) {
+		err := os.MkdirAll(filepath.Dir(filename), os.ModePerm)
 		if checkError(err) {
 			return err
 		}
@@ -705,7 +736,7 @@ func (p *Prunsrv) saveConfig() error {
 		return err
 	}
 
-	err = ioutil.WriteFile(path, ba, os.ModePerm)
+	err = ioutil.WriteFile(filename, ba, os.ModePerm)
 	if checkError(err) {
 		return err
 	}
