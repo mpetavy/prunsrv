@@ -18,7 +18,7 @@ https://commons.apache.org/proper/commons-daemon/procrun.html
 * Calls in the "StopClass" the static method "main" with "StopMethod" name as an argument to Arg []String
 * Executes Java executable as separated processes, so no "jvm.dll" integration
 * No dependencies on naming of Java static methods
-* Stores service configuration as JSON file to "ProgramData/prunsrv/\<servicename\>.json" (Windows) or "etc" (*nix)
+* Stores service configuration as JSON file to "ProgramData/prunsrv/\<servicename\>.json" (Windows) or "/etc/\<servicename\>.json" (*nix)
 
 ### Supported commands
 
