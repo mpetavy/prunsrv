@@ -559,10 +559,24 @@ func (p *Prunsrv) startService() error {
 
 	if p.LogPath != "" {
 		filename := p.configFilename(p.LogPath, ".log")
-		if !fileExists(filename) {
+		if !fileExists(filepath.Dir(filename)) {
 			err := os.MkdirAll(filepath.Dir(filename), os.ModePerm)
 			if checkError(err) {
 				return err
+			}
+		}
+
+		if fileExists(filename) {
+			fs, err := os.Stat(filename)
+			if checkError(err) {
+				return err
+			}
+
+			if fs.Size() > 10000000 {
+				err = os.Remove(filename)
+				if checkError(err) {
+					return err
+				}
 			}
 		}
 
