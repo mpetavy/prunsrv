@@ -2,7 +2,7 @@
 
 ### Project description
 
-Just developed to get around some Apache PRUNSRV problems with the latest version 1.3.1
+Just developed to get around some Apache PRUNSRV problems with the latest version.
 
 Your welcome to use this solution.
 
@@ -12,13 +12,13 @@ https://commons.apache.org/proper/commons-daemon/procrun.html
 
 ### Differences to Apache PRUNSRV
 
+* Tried to be parameter compatible with Apache PRUNSRV 
 * Works only with "Java" mode (no "jvm" or "exe" mode supported)
-* Calls the static "StartClass" "main" static method with "StartMethod" argument
-* Calls the static "StopClass" "main" static method with "StopMethod" argument
+* Calls in the "StartClass" the static method "main" with "StartMethod" name as an argument to Arg []String
+* Calls in the "StopClass" the static method "main" with "StopMethod" name as an argument to Arg []String
 * Executes Java executable as separated processes, so no "jvm.dll" integration
-* Calls Java static methods for "Start" and "Stop"
 * No dependencies on naming of Java static methods
-* Stores service configuration as JSON file to "ProgramData/prunsrv" (Windows) or "etc" (*nix)
+* Stores service configuration as JSON file to "ProgramData/prunsrv/\<servicename\>.json" (Windows) or "etc" (*nix)
 
 ### Supported commands
 
