@@ -21,7 +21,6 @@ var (
 	logf      *os.File
 	mu        sync.Mutex
 	isDebug   bool
-	logs      []string
 )
 
 func openLog() error {
@@ -33,15 +32,33 @@ func openLog() error {
 		}
 	}
 
+	filename := filepath.Join(dir, title()+".log")
+
+	if fileExists(filename) {
+		fs, err := os.Stat(filename)
+		if checkError(err) {
+			return err
+		}
+
+		if fs.Size() > 10000000 {
+			err = os.Remove(filename)
+			if checkError(err) {
+				return err
+			}
+		}
+	}
+
 	var err error
 
-	logf, err = os.OpenFile(filepath.Join(dir, title()+",log"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm)
+	logf, err = os.OpenFile(filename, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if checkError(err) {
 		return err
 	}
 
 	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-	log.SetOutput(io.MultiWriter(os.Stdout, logf))
+	log.SetOutput(MWriter(logf, os.Stderr))
+
+	log.Printf(strings.Repeat("-", 100))
 
 	return nil
 }
@@ -125,10 +142,7 @@ func checkError(err error) bool {
 	lastError = err.Error()
 
 	if isDebug {
-		s := fmt.Sprintf("%s %s", "ERROR", err.Error())
-		logs = append(logs, s+"\n")
-
-		log.Printf(s)
+		log.Printf(fmt.Sprintf("%s %s", "ERROR", err.Error()))
 	} else {
 		fmt.Fprint(os.Stderr, err.Error()+"\n")
 	}
@@ -150,10 +164,7 @@ func debug(values ...interface{}) {
 		a = append(a, fmt.Sprintf("%+v", reflect.ValueOf(value)))
 	}
 
-	s := fmt.Sprintf("%s %s", "DEBUG", strings.Join(a, " "))
-	logs = append(logs, s+"\n")
-
-	log.Printf(s)
+	log.Printf(fmt.Sprintf("%s %s", "DEBUG", strings.Join(a, " ")))
 }
 
 func isWindowsOS() bool {
@@ -247,16 +258,59 @@ func min[T constraints.Ordered](v0 T, v1 T) T {
 	return v1
 }
 
-func killPid(pid int) error {
-	p, err := os.FindProcess(1)
-	if err == nil {
+func killProcess(pid int) error {
+	p := findProcess(pid)
+	if p == nil {
 		return nil
 	}
 
-	err = p.Kill()
+	err := p.Kill()
 	if checkError(err) {
 		return err
 	}
 
 	return nil
+}
+
+func findProcess(pid int) *os.Process {
+	var b bool
+
+	process, err := os.FindProcess(int(pid))
+	if err != nil {
+		process = nil
+	} else {
+		b = process.Signal(syscall.Signal(0)) == nil
+
+		if !b {
+			process = nil
+		}
+	}
+
+	debug(fmt.Sprintf("findProcess %d: %v", pid, process != nil))
+
+	return process
+}
+
+type mwriter struct {
+	writers []io.Writer
+}
+
+func (mw *mwriter) Write(p []byte) (n int, err error) {
+	for _, w := range mw.writers {
+		w.Write(p)
+	}
+
+	return len(p), nil
+}
+
+func MWriter(writers ...io.Writer) io.Writer {
+	allWriters := make([]io.Writer, 0, len(writers))
+	for _, w := range writers {
+		if mw, ok := w.(*mwriter); ok {
+			allWriters = append(allWriters, mw.writers...)
+		} else {
+			allWriters = append(allWriters, w)
+		}
+	}
+	return &mwriter{allWriters}
 }

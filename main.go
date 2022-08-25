@@ -328,8 +328,6 @@ func (p *Prunsrv) scanArgs() error {
 		}
 	}
 
-	isDebug = isDebug || "debug" == p.LogLevel
-
 	p.ServiceConfig.Name = p.DisplayName
 	p.ServiceConfig.Arguments = []string{fmt.Sprintf("//RS//%s", p.DisplayName)}
 	p.ServiceConfig.Description = p.Description
@@ -426,9 +424,9 @@ func (p *Prunsrv) exec(asStart bool) (*exec.Cmd, error) {
 		args = append(args, p.StopMethod)
 	}
 
-	iowriter := io.Discard
+	logfWriter := io.Discard
 	if p.Logf != nil {
-		iowriter = p.Logf
+		logfWriter = p.Logf
 	}
 
 	cmd := &exec.Cmd{
@@ -436,8 +434,8 @@ func (p *Prunsrv) exec(asStart bool) (*exec.Cmd, error) {
 		Args:   args,
 		Env:    nil,
 		Dir:    p.StartPath,
-		Stdout: io.MultiWriter(os.Stdout, iowriter),
-		Stderr: io.MultiWriter(os.Stderr, iowriter),
+		Stdout: MWriter(logfWriter, os.Stdout),
+		Stderr: MWriter(logfWriter, os.Stderr),
 	}
 
 	debug("execCmd:", strings.Join(surroundWidth(append([]string{cmd.Path}, cmd.Args...), "\""), " "))
@@ -468,26 +466,32 @@ func (p *Prunsrv) Stop(s service.Service) error {
 		timeout = 60 * 60
 	}
 
-	timeout = min(timeout, 60*60)
+	timeoutDuration := time.Duration(min(timeout, 60*60)) * time.Second
 
-	stopCh := make(chan struct{})
-	stopTimerCh := time.NewTimer(time.Duration(timeout) * time.Second)
+	timeoutCh := time.NewTimer(timeoutDuration)
 
-	go func() {
-		checkError(p.stopService())
-
-		stopCh <- struct{}{}
-	}()
-
-	select {
-	case <-stopCh:
-		stopTimerCh.Stop()
-	case <-stopTimerCh.C:
-		stopTimerCh.Stop()
-
-		checkError(killPid(p.StartCmd.Process.Pid))
-		checkError(killPid(p.StopCmd.Process.Pid))
+	err = p.stopService()
+	if checkError(err) {
+		return err
 	}
+
+	stopped := false
+	for !stopped {
+		select {
+		case <-time.After(time.Millisecond * 500):
+			stopped = stopped || findProcess(p.StartCmd.Process.Pid) == nil
+		case <-timeoutCh.C:
+			checkError(fmt.Errorf("process %d did not stop within %v, will kill it", p.StartCmd.Process.Pid, timeoutDuration))
+			stopped = true
+		}
+	}
+
+	if !timeoutCh.Stop() {
+		<-timeoutCh.C
+	}
+
+	checkError(killProcess(p.StartCmd.Process.Pid))
+	checkError(killProcess(p.StopCmd.Process.Pid))
 
 	return nil
 }
@@ -568,6 +572,8 @@ func (p *Prunsrv) startService() error {
 		if checkError(err) {
 			return err
 		}
+
+		p.Logf.WriteString(strings.Repeat("-", 100) + "\n")
 	}
 
 	var err error
@@ -790,7 +796,7 @@ func (p *Prunsrv) deleteConfig() error {
 
 func run() error {
 	b, _ := getFlag("--debug")
-	isDebug = b
+	isDebug = !service.Interactive() || b
 
 	banner()
 
@@ -822,26 +828,6 @@ func run() error {
 	}
 
 	debug("Service:", p.DisplayName)
-
-	//if p.LogPath != "" {
-	//	if fileExists(p.LogPath) {
-	//		var err error
-	//
-	//		logf, err = os.OpenFile(p.configFilename(p.LogPath, ".log"), os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm)
-	//		if isError(err) {
-	//			return err
-	//		}
-	//
-	//		for _, l := range logs {
-	//			logf.WriteString(l)
-	//		}
-	//
-	//		defer logf.Close()
-	//
-	//		log.SetPrefix(p.LogPrefix + " ")
-	//		log.SetOutput(io.MultiWriter(os.Stdout, logf))
-	//	}
-	//}
 
 	switch {
 	case p.DoService:
