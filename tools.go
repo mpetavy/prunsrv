@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"golang.org/x/exp/constraints"
 	"golang.org/x/sys/windows"
 	"io"
 	"log"
@@ -228,4 +229,34 @@ func surroundWidth(strs []string, surround string) []string {
 	debug("surroundWidth:", resultStrs)
 
 	return resultStrs
+}
+
+func max[T constraints.Ordered](v0 T, v1 T) T {
+	if v0 > v1 {
+		return v0
+	}
+
+	return v1
+}
+
+func min[T constraints.Ordered](v0 T, v1 T) T {
+	if v0 < v1 {
+		return v0
+	}
+
+	return v1
+}
+
+func killPid(pid int) error {
+	p, err := os.FindProcess(1)
+	if err == nil {
+		return nil
+	}
+
+	err = p.Kill()
+	if checkError(err) {
+		return err
+	}
+
+	return nil
 }

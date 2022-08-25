@@ -13,6 +13,7 @@ import (
 	"strconv"
 	"strings"
 	"syscall"
+	"time"
 )
 
 var logger service.Logger
@@ -28,7 +29,8 @@ type Prunsrv struct {
 	DoPrint       bool            `json:"-"`
 	ServiceConfig service.Config  `json:"-"`
 	Service       service.Service `json:"-"`
-	Cmd           *exec.Cmd       `json:"-"`
+	StartCmd      *exec.Cmd       `json:"-"`
+	StopCmd       *exec.Cmd       `json:"-"`
 
 	DisplayName     string   `json:"DisplayName"`
 	Description     string   `json:"Description"`
@@ -54,7 +56,7 @@ type Prunsrv struct {
 }
 
 const (
-	version = "1.0.1"
+	version = "1.0.2"
 )
 
 func banner() {
@@ -387,7 +389,7 @@ func resolvEnvParameter(txt string) (string, error) {
 	return txt, err
 }
 
-func (p *Prunsrv) exec(asStart bool) error {
+func (p *Prunsrv) exec(asStart bool) (*exec.Cmd, error) {
 	var args []string
 
 	if p.JvmMx != "" {
@@ -422,7 +424,7 @@ func (p *Prunsrv) exec(asStart bool) error {
 		args = append(args, p.StopMethod)
 	}
 
-	p.Cmd = &exec.Cmd{
+	cmd := &exec.Cmd{
 		Path:   filepath.Join(p.JavaHome, "bin", javaExecutable()),
 		Args:   args,
 		Env:    nil,
@@ -431,14 +433,14 @@ func (p *Prunsrv) exec(asStart bool) error {
 		Stderr: os.Stderr,
 	}
 
-	debug("execCmd:", strings.Join(surroundWidth(append([]string{p.Cmd.Path}, p.Cmd.Args...), "\""), " "))
+	debug("execCmd:", strings.Join(surroundWidth(append([]string{cmd.Path}, cmd.Args...), "\""), " "))
 
-	err := p.Cmd.Start()
+	err := cmd.Start()
 	if checkError(err) {
-		return err
+		return nil, err
 	}
 
-	return nil
+	return cmd, nil
 }
 
 func (p *Prunsrv) Start(s service.Service) error {
@@ -454,9 +456,31 @@ func (p *Prunsrv) Start(s service.Service) error {
 func (p *Prunsrv) Stop(s service.Service) error {
 	debug("Stop")
 
+	timeout, err := strconv.Atoi(p.StopTimeout)
+	if checkError(err) {
+		timeout = 60 * 60
+	}
+
+	timeout = min(timeout, 60*60)
+
+	stopCh := make(chan struct{})
+	stopTimerCh := time.NewTimer(time.Duration(timeout) * time.Second)
+
 	go func() {
 		checkError(p.stopService())
+
+		stopCh <- struct{}{}
 	}()
+
+	select {
+	case <-stopCh:
+		stopTimerCh.Stop()
+	case <-stopTimerCh.C:
+		stopTimerCh.Stop()
+
+		checkError(killPid(p.StartCmd.Process.Pid))
+		checkError(killPid(p.StopCmd.Process.Pid))
+	}
 
 	return nil
 }
@@ -522,14 +546,16 @@ func (p *Prunsrv) printService() error {
 func (p *Prunsrv) startService() error {
 	debug("startService")
 
-	err := p.exec(true)
+	var err error
+
+	p.StartCmd, err = p.exec(true)
 	if checkError(err) {
 		return err
 	}
 
 	b, pidfilename := getFlag("--PidFile")
 	if b {
-		checkError(ioutil.WriteFile(pidfilename, []byte(strconv.Itoa(p.Cmd.Process.Pid)), os.ModePerm))
+		checkError(ioutil.WriteFile(pidfilename, []byte(strconv.Itoa(p.StartCmd.Process.Pid)), os.ModePerm))
 	}
 
 	return nil
@@ -538,7 +564,9 @@ func (p *Prunsrv) startService() error {
 func (p *Prunsrv) stopService() error {
 	debug("stopService")
 
-	err := p.exec(false)
+	var err error
+
+	p.StopCmd, err = p.exec(false)
 	if checkError(err) {
 		return err
 	}
