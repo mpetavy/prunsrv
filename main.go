@@ -58,7 +58,7 @@ type Prunsrv struct {
 }
 
 const (
-	version = "1.0.2"
+	version = "1.0.3"
 )
 
 func banner() {
