@@ -18,8 +18,6 @@ import (
 	"time"
 )
 
-var logger service.Logger
-
 type Prunsrv struct {
 	DoTest        bool            `json:"-"`
 	DoService     bool            `json:"-"`
@@ -59,7 +57,7 @@ type Prunsrv struct {
 }
 
 const (
-	version = "1.0.5"
+	version = "1.0.6"
 )
 
 func banner() {
