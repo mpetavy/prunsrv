@@ -417,7 +417,13 @@ func (p *Prunsrv) exec(asStart bool) (*exec.Cmd, error) {
 		args = append(args, p.Classpath)
 	}
 
+	logfWriter := io.Discard
+
 	if asStart {
+		if p.Logf != nil {
+			logfWriter = p.Logf
+		}
+
 		args = append(args, p.StartClass)
 		args = append(args, p.StartMethod)
 	} else {
@@ -425,18 +431,16 @@ func (p *Prunsrv) exec(asStart bool) (*exec.Cmd, error) {
 		args = append(args, p.StopMethod)
 	}
 
-	logfWriter := io.Discard
-	if p.Logf != nil {
-		logfWriter = p.Logf
+	cmd := &exec.Cmd{
+		Path: filepath.Join(p.JavaHome, "bin", javaExecutable()),
+		Args: args,
+		Env:  nil,
+		Dir:  p.StartPath,
 	}
 
-	cmd := &exec.Cmd{
-		Path:   filepath.Join(p.JavaHome, "bin", javaExecutable()),
-		Args:   args,
-		Env:    nil,
-		Dir:    p.StartPath,
-		Stdout: MWriter(logfWriter, os.Stdout),
-		Stderr: MWriter(logfWriter, os.Stderr),
+	if asStart {
+		cmd.Stdout = MWriter(logfWriter, os.Stdout)
+		cmd.Stderr = MWriter(logfWriter, os.Stderr)
 	}
 
 	debug("execCmd:", strings.Join(surroundWidth(append([]string{cmd.Path}, cmd.Args...), "\""), " "))
@@ -574,9 +578,13 @@ func (p *Prunsrv) startService() error {
 		return err
 	}
 
-	b, pidfilename := getFlag("--PidFile")
-	if b {
-		checkError(ioutil.WriteFile(pidfilename, []byte(strconv.Itoa(p.StartCmd.Process.Pid)), os.ModePerm))
+	if p.PidFile != "" {
+		filename := p.PidFile
+		if !filepath.IsAbs(filename) {
+			filename = p.configFilename(configDir(), ".pid")
+		}
+
+		checkError(ioutil.WriteFile(filename, []byte(strconv.Itoa(p.StartCmd.Process.Pid)), os.ModePerm))
 	}
 
 	return nil
@@ -599,9 +607,13 @@ func (p *Prunsrv) stopService() error {
 		}
 	}
 
-	b, pidfilename := getFlag("--PidFile")
-	if b && fileExists(pidfilename) {
-		checkError(os.Remove(pidfilename))
+	if p.PidFile != "" {
+		filename := p.PidFile
+		if !filepath.IsAbs(filename) {
+			filename = p.configFilename(configDir(), ".pid")
+		}
+
+		checkError(os.Remove(filename))
 	}
 
 	return nil
