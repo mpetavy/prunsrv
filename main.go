@@ -6,6 +6,7 @@ import (
 	"github.com/kardianos/service"
 	"io"
 	"io/ioutil"
+	"log"
 	"os"
 	"os/exec"
 	"os/signal"
@@ -557,32 +558,10 @@ func (p *Prunsrv) printService() error {
 func (p *Prunsrv) startService() error {
 	debug("startService")
 
-	if p.LogPath != "" {
-		filename := p.configFilename(p.LogPath, ".log")
-		if !fileExists(filepath.Dir(filename)) {
-			err := os.MkdirAll(filepath.Dir(filename), os.ModePerm)
-			if checkError(err) {
-				return err
-			}
-		}
-
-		if fileExists(filename) {
-			fs, err := os.Stat(filename)
-			if checkError(err) {
-				return err
-			}
-
-			if fs.Size() > 10000000 {
-				err = os.Remove(filename)
-				if checkError(err) {
-					return err
-				}
-			}
-		}
-
+	if p.LogPath != "" && p.LogLevel == "debug" {
 		var err error
 
-		p.Logf, err = os.OpenFile(filename, os.O_APPEND|os.O_WRONLY|os.O_CREATE, os.ModePerm)
+		p.Logf, err = createLogFile(p.configFilename(p.LogPath, ".log"))
 		if checkError(err) {
 			return err
 		}
@@ -812,12 +791,19 @@ func run() error {
 
 	banner()
 
-	err := openLog()
+	var err error
+
+	logf, err = createLogFile(filepath.Join(configDir(), title()+".log"))
 	if checkError(err) {
 		return err
 	}
 
-	defer closeLog()
+	defer func() {
+		logf.Close()
+	}()
+
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	log.SetOutput(MWriter(logf, os.Stderr))
 
 	b, _ = getFlag("//?")
 	if len(os.Args) < 2 || b {

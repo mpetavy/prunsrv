@@ -23,27 +23,27 @@ var (
 	isDebug   bool
 )
 
-func openLog() error {
-	dir := configDir()
+func createLogFile(filename string) (*os.File, error) {
+	dir := filepath.Dir(filename)
 	if !fileExists(dir) {
 		err := os.MkdirAll(dir, os.ModePerm)
 		if checkError(err) {
-			return err
+			return nil, err
 		}
 	}
-
-	filename := filepath.Join(dir, title()+".log")
 
 	if fileExists(filename) {
 		fs, err := os.Stat(filename)
 		if checkError(err) {
-			return err
+			return nil, err
 		}
 
 		if fs.Size() > 10000000 {
+			debug(fmt.Sprintf("truncate log file %s ", filename))
+
 			err = os.Remove(filename)
 			if checkError(err) {
-				return err
+				return nil, err
 			}
 		}
 	}
@@ -52,17 +52,10 @@ func openLog() error {
 
 	logf, err = os.OpenFile(filename, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if checkError(err) {
-		return err
+		return nil, err
 	}
 
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-	log.SetOutput(MWriter(logf, os.Stderr))
-
-	return nil
-}
-
-func closeLog() {
-	logf.Close()
+	return logf, nil
 }
 
 func rerunElevated() error {
