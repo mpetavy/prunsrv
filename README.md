@@ -38,7 +38,7 @@ The term "myservice" is the actual name of the configured service.
 ### Support parameters
 
 | Command         | Default | Description                                                         |
-| --------------- | ------- | ------------------------------------------------------------------- |
+| --------------- | ------- |---------------------------------------------------------------------|
 | Description     |         | Description of service                                              |
 | DisplayName     |         | Service name                                                        |
 | StartPath       |         | Working directory of the Java executable which executes the service |
@@ -59,7 +59,7 @@ The term "myservice" is the actual name of the configured service.
 | LogPrefix       |         | prefix to be used before each line on log                           |
 | ServiceUser     |         | Username of the user under which service is run                     |
 | ServicePassword |         | Password of the user under which service is run                     |
-| PidFile         |         | Path to store the serice PID                                        |
+| PidFile         |         | Path to store the service PID                                       |
 
 ### PRUNSRV in debug mode
 
