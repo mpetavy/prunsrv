@@ -31,7 +31,6 @@ type Prunsrv struct {
 	Service       service.Service `json:"-"`
 	StartCmd      *exec.Cmd       `json:"-"`
 	StopCmd       *exec.Cmd       `json:"-"`
-	Logf          *os.File        `json:"-"`
 
 	DisplayName     string   `json:"DisplayName"`
 	Description     string   `json:"Description"`
@@ -57,7 +56,7 @@ type Prunsrv struct {
 }
 
 const (
-	version = "1.0.6"
+	version = "1.0.7"
 )
 
 func banner() {
@@ -415,13 +414,7 @@ func (p *Prunsrv) exec(asStart bool) (*exec.Cmd, error) {
 		args = append(args, p.Classpath)
 	}
 
-	logfWriter := io.Discard
-
 	if asStart {
-		if p.Logf != nil {
-			logfWriter = p.Logf
-		}
-
 		args = append(args, p.StartClass)
 		args = append(args, p.StartMethod)
 	} else {
@@ -436,16 +429,25 @@ func (p *Prunsrv) exec(asStart bool) (*exec.Cmd, error) {
 		Dir:  p.StartPath,
 	}
 
-	if asStart {
+	logfWriter := io.Discard
+	if asStart && logf != nil {
+		logfWriter = logf
 		cmd.Stdout = MWriter(logfWriter, os.Stdout)
 		cmd.Stderr = MWriter(logfWriter, os.Stderr)
 	}
 
 	debug("execCmd:", strings.Join(surroundWidth(append([]string{cmd.Path}, cmd.Args...), "\""), " "))
 
-	err := cmd.Start()
-	if checkError(err) {
-		return nil, err
+	if asStart {
+		err := cmd.Start()
+		if checkError(err) {
+			return nil, err
+		}
+	} else {
+		err := cmd.Run()
+		if checkError(err) {
+			return nil, err
+		}
 	}
 
 	return cmd, nil
@@ -469,22 +471,29 @@ func (p *Prunsrv) Stop(s service.Service) error {
 		timeout = 60 * 60
 	}
 
-	timeoutDuration := time.Duration(min(timeout, 60*60)) * time.Second
-
-	timeoutCh := time.NewTimer(timeoutDuration)
-
 	err = p.stopService()
 	if checkError(err) {
 		return err
 	}
 
+	timeoutDuration := time.Duration(min(timeout, 60*60)) * time.Second
+	timeoutCh := time.NewTimer(timeoutDuration)
+	waitCh := make(chan struct{})
+
+	go func() {
+		checkError(p.StartCmd.Wait())
+
+		waitCh <- struct{}{}
+	}()
+
 	stopped := false
 	for !stopped {
 		select {
-		case <-time.After(time.Millisecond * 500):
-			stopped = stopped || findProcess(p.StartCmd.Process.Pid) == nil
+		case <-waitCh:
+			stopped = true
 		case <-timeoutCh.C:
-			checkError(fmt.Errorf("process %d did not stop within %v, will kill it", p.StartCmd.Process.Pid, timeoutDuration))
+			checkError(fmt.Errorf("process %d did not stop within %v, will now kill it", p.StartCmd.Process.Pid, timeoutDuration))
+			checkError(killProcess(p.StartCmd.Process.Pid))
 			stopped = true
 		}
 	}
@@ -492,9 +501,6 @@ func (p *Prunsrv) Stop(s service.Service) error {
 	if !timeoutCh.Stop() {
 		<-timeoutCh.C
 	}
-
-	checkError(killProcess(p.StartCmd.Process.Pid))
-	checkError(killProcess(p.StopCmd.Process.Pid))
 
 	return nil
 }
@@ -560,15 +566,6 @@ func (p *Prunsrv) printService() error {
 func (p *Prunsrv) startService() error {
 	debug("startService")
 
-	if p.LogPath != "" && p.LogLevel == "debug" {
-		var err error
-
-		p.Logf, err = createLogFile(p.configFilename(p.LogPath, ".log"))
-		if checkError(err) {
-			return err
-		}
-	}
-
 	var err error
 
 	p.StartCmd, err = p.exec(true)
@@ -596,13 +593,6 @@ func (p *Prunsrv) stopService() error {
 	p.StopCmd, err = p.exec(false)
 	if checkError(err) {
 		return err
-	}
-
-	if p.Logf != nil {
-		err = p.Logf.Close()
-		if checkError(err) {
-			return err
-		}
 	}
 
 	if p.PidFile != "" {
@@ -801,20 +791,6 @@ func run() error {
 
 	banner()
 
-	var err error
-
-	logf, err = createLogFile(filepath.Join(configDir(), title()+".log"))
-	if checkError(err) {
-		return err
-	}
-
-	defer func() {
-		logf.Close()
-	}()
-
-	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
-	log.SetOutput(MWriter(logf, os.Stderr))
-
 	b, _ = getFlag("//?")
 	if len(os.Args) < 2 || b {
 		usage()
@@ -826,7 +802,7 @@ func run() error {
 
 	p := &Prunsrv{}
 
-	err = p.scanArgs()
+	err := p.scanArgs()
 	if checkError(err) {
 		return err
 	}
@@ -834,6 +810,31 @@ func run() error {
 	if p.DisplayName == "" {
 		return fmt.Errorf("missing service name")
 	}
+
+	if p.LogPath != "" && p.LogLevel == "debug" {
+		var err error
+
+		logf, err = createLogFile(p.configFilename(p.LogPath, ".log"))
+		if checkError(err) {
+			return err
+		}
+	}
+
+	initLogs = nil
+
+	defer func() {
+		if logf != nil {
+			logf.Close()
+		}
+	}()
+
+	if p.LogPrefix == "" {
+		p.LogPrefix = title()
+	}
+
+	log.SetFlags(log.LstdFlags | log.Lmicroseconds)
+	log.SetOutput(MWriter(logf, os.Stderr))
+	log.SetPrefix(p.LogPrefix + " --- ")
 
 	debug("Service:", p.DisplayName)
 

@@ -7,9 +7,11 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"reflect"
 	"runtime"
+	"strconv"
 	"strings"
 	"sync"
 	"syscall"
@@ -21,6 +23,8 @@ var (
 	logf      *os.File
 	mu        sync.Mutex
 	isDebug   bool
+
+	initLogs = &[]string{}
 )
 
 func createLogFile(filename string) (*os.File, error) {
@@ -53,6 +57,10 @@ func createLogFile(filename string) (*os.File, error) {
 	logf, err = os.OpenFile(filename, os.O_APPEND|os.O_RDWR|os.O_CREATE, os.ModePerm)
 	if checkError(err) {
 		return nil, err
+	}
+
+	for _, l := range *initLogs {
+		log.Printf(l)
 	}
 
 	return logf, nil
@@ -132,10 +140,18 @@ func checkError(err error) bool {
 
 	lastError = err.Error()
 
+	var s string
+
 	if isDebug {
-		log.Printf(fmt.Sprintf("%s %s", "ERROR", err.Error()))
+		s = fmt.Sprintf("%s %s", "ERROR", err.Error())
+		log.Printf(s)
 	} else {
-		fmt.Fprint(os.Stderr, err.Error()+"\n")
+		s = err.Error()
+		fmt.Fprint(os.Stderr, s+"\n")
+	}
+
+	if initLogs != nil {
+		*initLogs = append(*initLogs, s)
 	}
 
 	return true
@@ -155,7 +171,12 @@ func debug(values ...interface{}) {
 		a = append(a, fmt.Sprintf("%+v", reflect.ValueOf(value)))
 	}
 
-	log.Printf(fmt.Sprintf("%s %s", "DEBUG", strings.Join(a, " ")))
+	s := fmt.Sprintf("%s %s", "DEBUG", strings.Join(a, " "))
+	if initLogs != nil {
+		*initLogs = append(*initLogs, s)
+	}
+
+	log.Printf(s)
 }
 
 func isWindowsOS() bool {
@@ -255,24 +276,28 @@ func killProcess(pid int) error {
 		return nil
 	}
 
-	err := p.Kill()
+	var cmd *exec.Cmd
+	if isWindowsOS() {
+		cmd = exec.Command("taskkill", "/f", "/pid", strconv.Itoa(pid))
+	} else {
+		cmd = exec.Command("kill", "-9", strconv.Itoa(pid))
+	}
+
+	debug("killProcess:", strings.Join(surroundWidth(append([]string{cmd.Path}, cmd.Args...), "\""), " "))
+
+	err := cmd.Run()
 	if checkError(err) {
 		return err
 	}
-
 	return nil
 }
 
 func findProcess(pid int) *os.Process {
-	var b bool
-
-	process, err := os.FindProcess(int(pid))
+	process, err := os.FindProcess(pid)
 	if err != nil {
 		process = nil
 	} else {
-		b = process.Signal(syscall.Signal(0)) == nil
-
-		if !b {
+		if !isWindowsOS() && process.Signal(syscall.Signal(0)) != nil {
 			process = nil
 		}
 	}
