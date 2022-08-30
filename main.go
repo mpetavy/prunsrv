@@ -56,34 +56,32 @@ type Prunsrv struct {
 }
 
 const (
-	version = "1.0.7"
+	version = "1.0.8"
 )
 
 func banner() {
 	debug("banner")
 
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "%s %s - %s\n", strings.ToUpper(title()), version, "A GO based alternative to Apache PRUNSRV")
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Copyright: © %s %s\n", "2022", "mpetavy")
-	fmt.Fprintf(os.Stderr, "Homepage:  %s\n", "https://github.com/mpetavy/prunsrv")
-	fmt.Fprintf(os.Stderr, "License:   %s\n", "https://www.apache.org/licenses/LICENSE-2.0.html")
-	fmt.Fprintf(os.Stderr, "\n")
+	fmt.Printf("\n")
+	fmt.Printf("%s %s - %s\n", strings.ToUpper(title()), version, "A GO based alternative to Apache PRUNSRV")
+	fmt.Printf("\n")
+	fmt.Printf("Copyright: © %s %s\n", "2022", "mpetavy")
+	fmt.Printf("Homepage:  %s\n", "https://github.com/mpetavy/prunsrv")
+	fmt.Printf("License:   %s\n", "https://www.apache.org/licenses/LICENSE-2.0.html")
+	fmt.Printf("\n")
 }
 
 func usage() {
 	debug("usage")
 
-	fmt.Fprintf(os.Stderr, "Just developed to get around some Apache PRUNSRV problems.\n")
-	fmt.Fprintf(os.Stderr, "Could not wait on Apache issue solving...\n")
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "You are welcome to use this solution on your own risk.\n")
-	fmt.Fprintf(os.Stderr, "Most of the original parameters are working the same.\n")
-	fmt.Fprintf(os.Stderr, "Parameters which are not known are simply ignored.\n")
-	fmt.Fprintf(os.Stderr, "Documentation can be found on the Github project page.\n")
-	fmt.Fprintf(os.Stderr, "\n")
-	fmt.Fprintf(os.Stderr, "Please consider the original PRUNSRV which can be found at\n")
-	fmt.Fprintf(os.Stderr, "https://commons.apache.org/proper/commons-daemon/procrun.html\n")
+	fmt.Printf("Just developed to get around some Apache PRUNSRV problems.\n")
+	fmt.Printf("\n")
+	fmt.Printf("Most of the original parameters are working the same.\n")
+	fmt.Printf("Parameters which are not known are simply ignored.\n")
+	fmt.Printf("Documentation can be found on the Github project page.\n")
+	fmt.Printf("\n")
+	fmt.Printf("Please consider the original PRUNSRV which can be found at\n")
+	fmt.Printf("https://commons.apache.org/proper/commons-daemon/procrun.html\n")
 }
 
 func (p *Prunsrv) scanArgs() error {

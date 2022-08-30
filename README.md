@@ -4,8 +4,6 @@
 
 Just developed to get around some Apache PRUNSRV problems with the latest version.
 
-Your welcome to use this solution.
-
 Most of the original parameters are working the same.
 Please consider the original PRUNSRV which can be found at
 https://commons.apache.org/proper/commons-daemon/procrun.html
@@ -14,9 +12,9 @@ https://commons.apache.org/proper/commons-daemon/procrun.html
 
 * Tried to be parameter compatible with Apache PRUNSRV 
 * Works only with "Java" mode (no "jvm" or "exe" mode supported)
-* Calls in the "StartClass" the static method "main" with "StartMethod" name as an argument to Arg []String
-* Calls in the "StopClass" the static method "main" with "StopMethod" name as an argument to Arg []String
-* Executes Java executable as separated processes, so no "jvm.dll" integration
+* Calls in the "StartClass" the static method "main" with "StartMethod" name as an argument to main(arg []String)
+* Calls in the "StopClass" the static method "main" with "StopMethod" name as an argument to main(arg []String)
+* Executes Java executable as separated processes, no "jvm.dll" integration
 * No dependencies on naming of Java static methods
 * Stores service configuration as JSON file to "ProgramData/prunsrv/\<servicename\>.json" (Windows) or "/etc/\<servicename\>.json" (*nix)
 
