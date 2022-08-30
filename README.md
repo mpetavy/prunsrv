@@ -61,7 +61,7 @@ The term "myservice" is the actual name of the configured service.
 
 ### PRUNSRV in debug mode
 
-Use the paramater "--debug" to run PRUNSRV in debug mode.
+Use the parameter "--debug" to run PRUNSRV in debug mode.
 
 ### Samples
 
