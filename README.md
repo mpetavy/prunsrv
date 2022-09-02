@@ -35,29 +35,29 @@ The term "myservice" is the actual name of the configured service.
 
 ### Support parameters
 
-| Command         | Default | Description                                                         |
-| --------------- | ------- |---------------------------------------------------------------------|
-| Description     |         | Description of service                                              |
-| DisplayName     |         | Service name                                                        |
-| StartPath       |         | Working directory of the Java executable which executes the service |
-| Startup         | manual  | "auto", "manual", "disabled" service startup mode                   |
-| JavaHome        |         | Path to the Java runtime to use                                     |
-| JvmOptions      |         | Java system properties to set as Java "-D" parameters               |
-| Classpath       |         | Classpath to use for the Java "-cp" parameter                       |
-| JvmMx           |         | Java options "-Xmx"                                                 |
-| JvmMs           |         | Java options "-Xms"                                                 |
-| JvmSs           |         | Java options "-Xss"                                                 |
-| StartClass      | Service | FQDN of the Java class which starts the service                     |
-| StopClass       | Service | FQDN of the Java class which starts the service                     |
-| StartMethod     | start   | Name of the static class method to call to start the service        |
-| StopMethod      | stop    | Name of the static class method to call to stop the service         |
-| StopTimeout     | 20      | Timeout in seconds after that the service is terminated             |
-| LogPath         |         | Path to PRUNSRV log file                                            |
-| LogLevel        | info    | "info" or "debug" level                                             |
-| LogPrefix       |         | prefix to be used before each line on log                           |
-| ServiceUser     |         | Username of the user under which service is run                     |
-| ServicePassword |         | Password of the user under which service is run                     |
-| PidFile         |         | Path to store the service PID                                       |
+| Command           | Default | Description                                                         |
+| ----------------- | ------- |---------------------------------------------------------------------|
+| --Description     |         | Description of service                                              |
+| --DisplayName     |         | Service name                                                        |
+| --StartPath       |         | Working directory of the Java executable which executes the service |
+| --Startup         | manual  | "auto", "manual", "disabled" service startup mode                   |
+| --JavaHome        |         | Path to the Java runtime to use                                     |
+| --JvmOptions      |         | Java system properties to set as Java "-D" parameters               |
+| --Classpath       |         | Classpath to use for the Java "-cp" parameter                       |
+| --JvmMx           |         | Java options "-Xmx"                                                 |
+| --JvmMs           |         | Java options "-Xms"                                                 |
+| --JvmSs           |         | Java options "-Xss"                                                 |
+| --StartClass      | Service | FQDN of the Java class which starts the service                     |
+| --StopClass       | Service | FQDN of the Java class which starts the service                     |
+| --StartMethod     | start   | Name of the static class method to call to start the service        |
+| --StopMethod      | stop    | Name of the static class method to call to stop the service         |
+| --StopTimeout     | 20      | Timeout in seconds after that the service is terminated             |
+| --LogPath         |         | Path to PRUNSRV log file                                            |
+| --LogLevel        | info    | "info" or "debug" level                                             |
+| --LogPrefix       |         | prefix to be used before each line on log                           |
+| --ServiceUser     |         | Username of the user under which service is run                     |
+| --ServicePassword |         | Password of the user under which service is run                     |
+| --PidFile         |         | Path to store the service PID                                       |
 
 ### PRUNSRV in debug mode
 
